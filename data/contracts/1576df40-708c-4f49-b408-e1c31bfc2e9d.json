@@ -1,0 +1,31 @@
+{
+  "uuid": "1576df40-708c-4f49-b408-e1c31bfc2e9d",
+  "title": "Signing Test Contract",
+  "description": "Contract for testing signature functionality",
+  "participants": [
+    "uuid-signer-1",
+    "uuid-signer-2",
+    "2d4860e5-aa12-42af-a83c-aba2832a0faa"
+  ],
+  "steps": [
+    {
+      "id": "signing-step-1",
+      "description": "First step to sign",
+      "magic_spell": null,
+      "order": 0,
+      "signatures": {
+        "uuid-signer-1": null,
+        "uuid-signer-2": null,
+        "2d4860e5-aa12-42af-a83c-aba2832a0faa": null
+      },
+      "completed": false,
+      "created_at": "1754011046842"
+    }
+  ],
+  "product_uuid": null,
+  "bdo_location": null,
+  "created_at": "1754011046842",
+  "updated_at": "1754011046842",
+  "status": "active",
+  "creator": "2d4860e5-aa12-42af-a83c-aba2832a0faa"
+}

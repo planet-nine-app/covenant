@@ -1,0 +1,65 @@
+{
+  "uuid": "bf13f0d0-d2cc-47fd-b62f-f162868968a2",
+  "title": "Demo Magical Contract",
+  "description": "A three-step workflow demonstration showcasing dual-signature authentication",
+  "participants": [
+    "11da2546-4dbe-4dbe-a7c2-e60222219c15",
+    "ff9d4992-8b1d-43bb-a403-1d04e332c1d9"
+  ],
+  "steps": [
+    {
+      "id": "step-1",
+      "description": "Initial project setup and requirements gathering",
+      "magicSpell": {
+        "type": "payment",
+        "amount": 100,
+        "currency": "MP"
+      },
+      "order": 0,
+      "signatures": {
+        "11da2546-4dbe-4dbe-a7c2-e60222219c15": null,
+        "ff9d4992-8b1d-43bb-a403-1d04e332c1d9": null
+      },
+      "completed": false,
+      "createdAt": "1754025113634"
+    },
+    {
+      "id": "step-2",
+      "description": "Development phase with milestone delivery",
+      "magicSpell": {
+        "type": "payment",
+        "amount": 500,
+        "currency": "MP"
+      },
+      "order": 1,
+      "signatures": {
+        "11da2546-4dbe-4dbe-a7c2-e60222219c15": null,
+        "ff9d4992-8b1d-43bb-a403-1d04e332c1d9": null
+      },
+      "completed": false,
+      "createdAt": "1754025113634"
+    },
+    {
+      "id": "step-3",
+      "description": "Final review, testing, and project completion",
+      "magicSpell": {
+        "type": "reward",
+        "amount": 250,
+        "currency": "MP"
+      },
+      "order": 2,
+      "signatures": {
+        "11da2546-4dbe-4dbe-a7c2-e60222219c15": null,
+        "ff9d4992-8b1d-43bb-a403-1d04e332c1d9": null
+      },
+      "completed": false,
+      "createdAt": "1754025113634"
+    }
+  ],
+  "productUuid": null,
+  "bdoLocation": null,
+  "createdAt": "1754025113634",
+  "updatedAt": "1754025113634",
+  "status": "active",
+  "creator": "11da2546-4dbe-4dbe-a7c2-e60222219c15"
+}

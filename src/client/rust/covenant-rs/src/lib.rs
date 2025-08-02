@@ -15,9 +15,13 @@ pub struct Contract {
     pub description: String,
     pub participants: Vec<String>,
     pub steps: Vec<ContractStep>,
+    #[serde(rename = "productUuid")]
     pub product_uuid: Option<String>,
+    #[serde(rename = "bdoLocation")]
     pub bdo_location: Option<String>,
+    #[serde(rename = "createdAt")]
     pub created_at: String,
+    #[serde(rename = "updatedAt")]
     pub updated_at: String,
     pub status: String,
 }
@@ -26,11 +30,14 @@ pub struct Contract {
 pub struct ContractStep {
     pub id: String,
     pub description: String,
+    #[serde(rename = "magicSpell")]
     pub magic_spell: Option<serde_json::Value>,
     pub order: usize,
     pub signatures: HashMap<String, Option<StepSignature>>,
     pub completed: bool,
+    #[serde(rename = "createdAt")]
     pub created_at: String,
+    #[serde(rename = "completedAt")]
     pub completed_at: Option<String>,
 }
 
@@ -46,9 +53,13 @@ pub struct ContractSummary {
     pub uuid: String,
     pub title: String,
     pub participants: Vec<String>,
+    #[serde(rename = "createdAt")]
     pub created_at: String,
+    #[serde(rename = "updatedAt")]
     pub updated_at: String,
+    #[serde(rename = "stepCount")]
     pub step_count: usize,
+    #[serde(rename = "completedSteps")]
     pub completed_steps: usize,
 }
 
@@ -69,36 +80,54 @@ pub struct HealthInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignStepRequest {
+    #[serde(rename = "userUUID")]
     pub participant_uuid: String,
+    #[serde(rename = "stepId")]
     pub step_id: String,
     pub signature: String,
     pub timestamp: i64,
-    pub message: String,
+    #[serde(rename = "pubKey")]
+    pub pub_key: String,
+    #[serde(rename = "stepSignature")]
+    pub step_signature: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignStepResponse {
+    #[serde(rename = "contractUuid")]
     pub contract_uuid: String,
+    #[serde(rename = "stepId")]
     pub step_id: String,
+    #[serde(rename = "stepCompleted")]
     pub step_completed: bool,
+    #[serde(rename = "magicTriggered")]
     pub magic_triggered: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractProgress {
+    #[serde(rename = "totalSteps")]
     pub total_steps: usize,
+    #[serde(rename = "completedSteps")]
     pub completed_steps: usize,
+    #[serde(rename = "progressPercent")]
     pub progress_percent: f64,
+    #[serde(rename = "participantCount")]
     pub participant_count: usize,
+    #[serde(rename = "isComplete")]
     pub is_complete: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserSignatureStatus {
+    #[serde(rename = "stepId")]
     pub step_id: String,
     pub description: String,
+    #[serde(rename = "hasSigned")]
     pub has_signed: bool,
+    #[serde(rename = "signatureTimestamp")]
     pub signature_timestamp: Option<i64>,
+    #[serde(rename = "isCompleted")]
     pub is_completed: bool,
 }
 
@@ -223,18 +252,22 @@ impl CovenantClient {
             .ok_or_else(|| CovenantError::SessionlessError("Sessionless instance required for signing".to_string()))?;
 
         let timestamp = chrono::Utc::now().timestamp_millis();
-        let signature_message = message.unwrap_or(&format!("Signing step: {}", step_id));
-        let data_to_sign = format!("{}:{}:{}:{}", contract_uuid, step_id, timestamp, signature_message);
         
-        let signature = sessionless.sign(&data_to_sign)
+        let main_message = format!("{}{}{}", timestamp, sessionless.uuid, contract_uuid);
+        let main_signature = sessionless.sign(&main_message)
+            .map_err(|e| CovenantError::SessionlessError(e.to_string()))?;
+        
+        let step_message = format!("{}{}{}{}", timestamp, sessionless.uuid, contract_uuid, step_id);
+        let step_signature = sessionless.sign(&step_message)
             .map_err(|e| CovenantError::SessionlessError(e.to_string()))?;
 
         let payload = SignStepRequest {
             participant_uuid: sessionless.uuid.clone(),
             step_id: step_id.to_string(),
-            signature,
+            signature: main_signature,
             timestamp,
-            message: signature_message.to_string(),
+            pub_key: sessionless.public_key.clone(),
+            step_signature,
         };
 
         let url = format!("{}/contract/{}/sign", self.base_url, contract_uuid);
@@ -464,7 +497,7 @@ impl ContractBuilder {
             serde_json::json!({
                 "id": format!("step-{}", index + 1),
                 "description": description,
-                "magic_spell": magic_spell
+                "magicSpell": magic_spell
             })
         }).collect();
 
@@ -473,8 +506,8 @@ impl ContractBuilder {
             "description": self.description.as_ref().unwrap_or(&String::new()),
             "participants": self.participants,
             "steps": steps,
-            "product_uuid": self.product_uuid,
-            "bdo_location": self.bdo_location
+            "productUuid": self.product_uuid,
+            "bdoLocation": self.bdo_location
         }))
     }
 }

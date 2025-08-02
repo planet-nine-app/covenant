@@ -1,0 +1,17 @@
+{
+  "name": "covenant-demo",
+  "version": "1.0.0",
+  "description": "Interactive demo for Covenant magical contract service",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "DEV=true node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "sessionless-node": "^0.11.0"
+  },
+  "author": "planetnineisaspaceship",
+  "license": "MIT"
+}

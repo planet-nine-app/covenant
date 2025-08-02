@@ -4,9 +4,38 @@
  */
 
 class CovenantClient {
-  constructor(baseUrl, sessionless) {
+  constructor(baseUrl, sessionless, keys = null) {
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     this.sessionless = sessionless;
+    this.userUUID = null;
+    this.pubKey = keys ? keys.pubKey : null;
+  }
+  
+  // Set user UUID (required for authentication)
+  setUserUUID(userUUID) {
+    this.userUUID = userUUID;
+  }
+  
+  // Helper to create authenticated payload
+  async createAuthenticatedPayload(contractUUID = null, additionalData = {}) {
+    if (!this.sessionless || !this.userUUID || !this.pubKey) {
+      throw new Error('Sessionless authentication not properly initialized. Call setUserUUID() and ensure sessionless has keys.');
+    }
+    
+    const timestamp = new Date().getTime() + '';
+    const message = contractUUID 
+      ? timestamp + this.userUUID + contractUUID
+      : timestamp + this.userUUID;
+    
+    const signature = await this.sessionless.sign(message);
+    
+    return {
+      signature,
+      timestamp,
+      userUUID: this.userUUID,
+      pubKey: this.pubKey,
+      ...additionalData
+    };
   }
 
   // Health check
@@ -23,21 +52,21 @@ class CovenantClient {
   // Create new magical contract
   async createContract(contractData) {
     try {
-      const payload = {
+      const authPayload = await this.createAuthenticatedPayload(null, {
         title: contractData.title,
         description: contractData.description || '',
         participants: contractData.participants || [],
         steps: contractData.steps || [],
-        product_uuid: contractData.product_uuid || null,
-        bdo_location: contractData.bdo_location || null
-      };
+        productUuid: contractData.productUuid || null,
+        bdoLocation: contractData.bdoLocation || null
+      });
 
       const response = await fetch(`${this.baseUrl}/contract`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(authPayload)
       });
 
       const data = await response.json();
@@ -71,12 +100,14 @@ class CovenantClient {
   // Update contract
   async updateContract(uuid, updates) {
     try {
+      const authPayload = await this.createAuthenticatedPayload(uuid, updates);
+
       const response = await fetch(`${this.baseUrl}/contract/${uuid}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updates)
+        body: JSON.stringify(authPayload)
       });
 
       const data = await response.json();
@@ -98,28 +129,23 @@ class CovenantClient {
         throw new Error('Sessionless instance required for signing');
       }
 
-      // Create signature payload
-      const timestamp = Date.now();
-      const signatureMessage = message || `Signing step: ${stepId}`;
-      const dataToSign = `${contractUuid}:${stepId}:${timestamp}:${signatureMessage}`;
+      // Create the main authentication payload
+      const authPayload = await this.createAuthenticatedPayload(contractUuid);
       
-      // Generate signature using sessionless
-      const signature = await this.sessionless.sign(dataToSign);
-
-      const payload = {
-        participant_uuid: this.sessionless.uuid,
-        step_id: stepId,
-        signature: signature,
-        timestamp: timestamp,
-        message: signatureMessage
-      };
+      // Create step signature - timestamp + userUUID + contractUUID + stepId
+      const stepMessage = authPayload.timestamp + authPayload.userUUID + contractUuid + stepId;
+      const stepSignature = await this.sessionless.sign(stepMessage);
+      
+      // Add step-specific data
+      authPayload.stepId = stepId;
+      authPayload.stepSignature = stepSignature;
 
       const response = await fetch(`${this.baseUrl}/contract/${contractUuid}/sign`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(authPayload)
       });
 
       const data = await response.json();
@@ -167,8 +193,14 @@ class CovenantClient {
   // Delete contract
   async deleteContract(uuid) {
     try {
+      const authPayload = await this.createAuthenticatedPayload(uuid);
+
       const response = await fetch(`${this.baseUrl}/contract/${uuid}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(authPayload)
       });
 
       const data = await response.json();
@@ -211,7 +243,7 @@ class CovenantClient {
     const steps = stepDescriptions.map((desc, index) => ({
       id: `step-${index + 1}`,
       description: desc,
-      magic_spell: null // Can be added later
+      magicSpell: null // Can be added later
     }));
 
     return this.createContract({
@@ -219,7 +251,7 @@ class CovenantClient {
       description,
       participants,
       steps,
-      product_uuid: productUuid
+      productUuid: productUuid
     });
   }
 
@@ -236,7 +268,7 @@ class CovenantClient {
         throw new Error(`Step ${stepId} not found`);
       }
 
-      step.magic_spell = magicSpell;
+      step.magicSpell = magicSpell;
 
       // Update contract
       return await this.updateContract(contractUuid, { steps: contract.steps });
@@ -287,6 +319,9 @@ class CovenantClient {
 }
 
 // Export for different environments
+export default CovenantClient;
+
+// Also support CommonJS for backwards compatibility
 if (typeof module !== 'undefined' && module.exports) {
   // Node.js environment
   module.exports = CovenantClient;

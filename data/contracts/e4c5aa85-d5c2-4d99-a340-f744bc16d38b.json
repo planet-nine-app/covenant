@@ -1,0 +1,104 @@
+{
+  "uuid": "e4c5aa85-d5c2-4d99-a340-f744bc16d38b",
+  "title": "Demo Magical Contract",
+  "description": "A three-step workflow demonstration showcasing dual-signature authentication",
+  "participants": [
+    "0a93be51-a1d2-4060-9c0e-8802b813797a",
+    "5e213d89-59f8-4144-a6f0-677bd92cbff7"
+  ],
+  "steps": [
+    {
+      "id": "step-1",
+      "description": "Initial project setup and requirements gathering",
+      "magicSpell": {
+        "type": "payment",
+        "amount": 100,
+        "currency": "MP"
+      },
+      "order": 0,
+      "signatures": {
+        "0a93be51-a1d2-4060-9c0e-8802b813797a": {
+          "signature": "7f936e03d625619eafee3ba5b0bba89d729ddfb2768babd253699f9d686d64c17e5b4eceaca060bf6c37ce52873d261e0c2dd53c220831b15062457c5e89c004",
+          "timestamp": "1754073448483",
+          "pubKey": "03ed31bc2a73e795cba80bbe0426767b000148290780bb033a2a35e1e9d6c065f4",
+          "message": "17540734484830a93be51-a1d2-4060-9c0e-8802b813797ae4c5aa85-d5c2-4d99-a340-f744bc16d38bstep-1",
+          "signed_at": "1754073448495"
+        },
+        "5e213d89-59f8-4144-a6f0-677bd92cbff7": {
+          "signature": "4ddef5d2914b349cce920e59ed3f552a7c5461a7e66b4f83cbb22e37a93dbda67a49c39f3476be485f12eed90a78a33f16e4e1a4a54225d365acc4c215d29528",
+          "timestamp": "1754073468024",
+          "pubKey": "03ee7072781a71d21353b315ab089cdb7dd8c1500a5e188509663249d2827d52d5",
+          "message": "17540734680245e213d89-59f8-4144-a6f0-677bd92cbff7e4c5aa85-d5c2-4d99-a340-f744bc16d38bstep-1",
+          "signed_at": "1754073468035"
+        }
+      },
+      "completed": true,
+      "createdAt": "1754073431546",
+      "completedAt": "1754073468035"
+    },
+    {
+      "id": "step-2",
+      "description": "Development phase with milestone delivery",
+      "magicSpell": {
+        "type": "payment",
+        "amount": 500,
+        "currency": "MP"
+      },
+      "order": 1,
+      "signatures": {
+        "0a93be51-a1d2-4060-9c0e-8802b813797a": {
+          "signature": "aa461c4f0eb6510dcf51fe1bb3e8e71ee67dff98e4c7bc334f9ceedc16949013417f2394c46a60a4ad43605bb619b2e0928fbad126720967446d766dd9f714c6",
+          "timestamp": "1754073494235",
+          "pubKey": "03ed31bc2a73e795cba80bbe0426767b000148290780bb033a2a35e1e9d6c065f4",
+          "message": "17540734942350a93be51-a1d2-4060-9c0e-8802b813797ae4c5aa85-d5c2-4d99-a340-f744bc16d38bstep-2",
+          "signed_at": "1754073494244"
+        },
+        "5e213d89-59f8-4144-a6f0-677bd92cbff7": {
+          "signature": "06fe476514e54ec865710c7ae8c2ece98c01e84c15003914182018161fa9bdf94947bce8bd913939835654d46eea78c52ba2e248bc24eb63d4c53d0a3a7bf08d",
+          "timestamp": "1754073492350",
+          "pubKey": "03ee7072781a71d21353b315ab089cdb7dd8c1500a5e188509663249d2827d52d5",
+          "message": "17540734923505e213d89-59f8-4144-a6f0-677bd92cbff7e4c5aa85-d5c2-4d99-a340-f744bc16d38bstep-2",
+          "signed_at": "1754073492360"
+        }
+      },
+      "completed": true,
+      "createdAt": "1754073431546",
+      "completedAt": "1754073494244"
+    },
+    {
+      "id": "step-3",
+      "description": "Final review, testing, and project completion",
+      "magicSpell": {
+        "type": "reward",
+        "amount": 250,
+        "currency": "MP"
+      },
+      "order": 2,
+      "signatures": {
+        "0a93be51-a1d2-4060-9c0e-8802b813797a": {
+          "signature": "862dd2a5063ed09620731a25633c4cdecea31a3bb99b5ac67c38817c08739c1a6b37cf002e8a3903da6fab9d3916fea548a2a990fd196b409469f016b2da5e3a",
+          "timestamp": "1754073498683",
+          "pubKey": "03ed31bc2a73e795cba80bbe0426767b000148290780bb033a2a35e1e9d6c065f4",
+          "message": "17540734986830a93be51-a1d2-4060-9c0e-8802b813797ae4c5aa85-d5c2-4d99-a340-f744bc16d38bstep-3",
+          "signed_at": "1754073498693"
+        },
+        "5e213d89-59f8-4144-a6f0-677bd92cbff7": {
+          "signature": "6bfe2a9078e5521e6bdb63bdce56eb629af6d53c92fa6892048b598758fec5a21ab04b7500ad2f9075f3f6be1aadc61f263b941e72c1ea1648cd2f036c21c816",
+          "timestamp": "1754073500599",
+          "pubKey": "03ee7072781a71d21353b315ab089cdb7dd8c1500a5e188509663249d2827d52d5",
+          "message": "17540735005995e213d89-59f8-4144-a6f0-677bd92cbff7e4c5aa85-d5c2-4d99-a340-f744bc16d38bstep-3",
+          "signed_at": "1754073500608"
+        }
+      },
+      "completed": true,
+      "createdAt": "1754073431546",
+      "completedAt": "1754073500608"
+    }
+  ],
+  "productUuid": null,
+  "bdoLocation": null,
+  "createdAt": "1754073431546",
+  "updatedAt": "1754073500609",
+  "status": "active",
+  "creator": "0a93be51-a1d2-4060-9c0e-8802b813797a"
+}

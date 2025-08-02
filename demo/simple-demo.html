@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Covenant Demo - Magical Contract Signing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .demo-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 30px;
+            padding: 30px;
+            min-height: 70vh;
+        }
+
+        .user-panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #e9ecef;
+        }
+
+        .user-panel h2 {
+            color: #495057;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+
+        .user-info {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        .user-info label {
+            display: block;
+            font-weight: 600;
+            color: #6c757d;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .user-info .value {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 5px;
+            word-break: break-all;
+            border: 1px solid #e9ecef;
+        }
+
+        .sign-button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .sign-button.active {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
+        }
+
+        .sign-button.active:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .sign-button.inactive {
+            background: #6c757d;
+            color: white;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .sign-button.signed {
+            background: linear-gradient(135deg, #17a2b8, #6f42c1);
+            color: white;
+            cursor: default;
+        }
+
+        .contract-panel {
+            background: linear-gradient(135deg, #faf7f0 0%, #f8f4e6 100%);
+            border-radius: 15px;
+            padding: 30px;
+            border: 3px solid #d2691e;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .contract-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" font-size="100" opacity="0.05">✨</text></svg>') repeat;
+            animation: float 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .contract-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .contract-title {
+            text-align: center;
+            color: #b8860b;
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .contract-subtitle {
+            text-align: center;
+            color: #8b4513;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 20px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            border: 2px solid #d2691e;
+        }
+
+        .progress-fill {
+            background: linear-gradient(135deg, #ffd700, #ffed4a);
+            height: 100%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8b4513;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .steps {
+            list-style: none;
+        }
+
+        .step {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .step.current {
+            border-color: #ffd700;
+            background: linear-gradient(135deg, #fffbf0, #faf7f0);
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.2);
+        }
+
+        .step.completed {
+            border-color: #28a745;
+            background: linear-gradient(135deg, #f8fff8, #f0fff0);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 15px;
+            font-size: 0.9rem;
+        }
+
+        .step.completed .step-number {
+            background: #28a745;
+            color: white;
+        }
+
+        .step.current .step-number {
+            background: #ffd700;
+            color: #8b4513;
+            animation: pulse 2s infinite;
+        }
+
+        .step:not(.completed):not(.current) .step-number {
+            background: #6c757d;
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .step-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .step-description {
+            color: #6c757d;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .signatures {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .signature {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .signature.signed {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .signature.pending {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+
+        .magic-spell {
+            background: linear-gradient(135deg, #6f42c1, #e83e8c);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: inline-block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .init-button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+        }
+
+        .init-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        @media (max-width: 1200px) {
+            .demo-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🪄 Covenant Demo</h1>
+            <p>Magical Contract Signing with Dual Authentication</p>
+        </div>
+
+        <div class="demo-content">
+            <!-- User 1 Panel -->
+            <div class="user-panel">
+                <h2>👤 Alice (User 1)</h2>
+                <div class="user-info">
+                    <label>User UUID:</label>
+                    <div class="value" id="user1-uuid">Click "Initialize Demo" to generate</div>
+                </div>
+                <div class="user-info">
+                    <label>Public Key:</label>
+                    <div class="value" id="user1-pubkey">Click "Initialize Demo" to generate</div>
+                </div>
+                <div class="user-info">
+                    <label>Status:</label>
+                    <div class="value" id="user1-privkey">Keys will be generated automatically</div>
+                </div>
+                <button class="sign-button inactive" id="user1-sign" onclick="signStep('user1')">
+                    🖋️ Sign Current Step
+                </button>
+                <div id="user1-status"></div>
+            </div>
+
+            <!-- Contract Panel -->
+            <div class="contract-panel">
+                <div class="contract-content">
+                    <h1 class="contract-title">✨ Demo Magical Contract ✨</h1>
+                    <p class="contract-subtitle">A three-step workflow demonstration</p>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill" style="width: 0%;">Ready to begin</div>
+                    </div>
+
+                    <div id="contract-content">
+                        <div style="text-align: center; padding: 40px;">
+                            <p style="margin-bottom: 20px; color: #6c757d;">
+                                This demo shows how Covenant handles multi-party contract signing with cryptographic authentication.
+                            </p>
+                            <button class="init-button" onclick="initDemo()">
+                                🚀 Initialize Demo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User 2 Panel -->
+            <div class="user-panel">
+                <h2>👤 Bob (User 2)</h2>
+                <div class="user-info">
+                    <label>User UUID:</label>
+                    <div class="value" id="user2-uuid">Click "Initialize Demo" to generate</div>
+                </div>
+                <div class="user-info">
+                    <label>Public Key:</label>
+                    <div class="value" id="user2-pubkey">Click "Initialize Demo" to generate</div>
+                </div>
+                <div class="user-info">
+                    <label>Status:</label>
+                    <div class="value" id="user2-privkey">Keys will be generated automatically</div>
+                </div>
+                <button class="sign-button inactive" id="user2-sign" onclick="signStep('user2')">
+                    🖋️ Sign Current Step
+                </button>
+                <div id="user2-status"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock simple crypto for demo (in production, use sessionless-node)
+        function generateMockKeys() {
+            const chars = 'abcdef0123456789';
+            const pubKey = Array.from({length: 64}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+            const privKey = Array.from({length: 64}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+            return { pubKey, privKey };
+        }
+        
+        function generateMockUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        
+        function mockSign(message) {
+            // Simple mock signature - in production use real crypto
+            const hash = message.split('').reduce((a, b) => {
+                a = ((a << 5) - a) + b.charCodeAt(0);
+                return a & a;
+            }, 0);
+            return Math.abs(hash).toString(16).padStart(16, '0');
+        }
+
+        // Simplified client for demo
+        class DemoCovenantClient {
+            constructor(baseUrl, userUUID, keys) {
+                this.baseUrl = baseUrl;
+                this.userUUID = userUUID;
+                this.keys = keys;
+            }
+            
+            async createAuthenticatedPayload(contractUUID = null, additionalData = {}) {
+                const timestamp = new Date().getTime() + '';
+                const message = contractUUID 
+                    ? timestamp + this.userUUID + contractUUID
+                    : timestamp + this.userUUID;
+                
+                const signature = mockSign(message);
+                
+                return {
+                    signature,
+                    timestamp,
+                    userUUID: this.userUUID,
+                    pubKey: this.keys.pubKey,
+                    ...additionalData
+                };
+            }
+            
+            async createContract(contractData) {
+                const authPayload = await this.createAuthenticatedPayload(null, contractData);
+                
+                const response = await fetch(`${this.baseUrl}/contract`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authPayload)
+                });
+                
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create contract');
+                }
+                return data;
+            }
+            
+            async getContract(uuid) {
+                const response = await fetch(`${this.baseUrl}/contract/${uuid}`);
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to get contract');
+                }
+                return data;
+            }
+            
+            async signStep(contractUuid, stepId) {
+                const authPayload = await this.createAuthenticatedPayload(contractUuid);
+                const stepMessage = authPayload.timestamp + authPayload.userUUID + contractUuid + stepId;
+                const stepSignature = mockSign(stepMessage);
+                
+                authPayload.stepId = stepId;
+                authPayload.stepSignature = stepSignature;
+                
+                const response = await fetch(`${this.baseUrl}/contract/${contractUuid}/sign`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(authPayload)
+                });
+                
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to sign step');
+                }
+                return data;
+            }
+        }
+
+        // Global state
+        let users = {};
+        let clients = {};
+        let contract = null;
+        let contractUuid = null;
+        let refreshInterval = null;
+        
+        const baseURL = 'http://127.0.0.1:3011';
+
+        // Initialize demo
+        async function initDemo() {
+            try {
+                document.getElementById('contract-content').innerHTML = '<div class="loading">Initializing demo...</div>';
+                
+                // Generate keys for both users
+                await generateUserKeys();
+                
+                // Create the demo contract
+                await createDemoContract();
+                
+                // Start polling for updates
+                if (refreshInterval) clearInterval(refreshInterval);
+                refreshInterval = setInterval(refreshContract, 2000);
+                
+            } catch (error) {
+                console.error('Demo initialization failed:', error);
+                showError('Failed to initialize demo: ' + error.message);
+            }
+        }
+
+        async function generateUserKeys() {
+            // User 1 (Alice)
+            const keys1 = generateMockKeys();
+            const uuid1 = generateMockUUID();
+            
+            users.user1 = { keys: keys1, uuid: uuid1, name: 'Alice' };
+            clients.user1 = new DemoCovenantClient(baseURL, uuid1, keys1);
+            
+            // User 2 (Bob)
+            const keys2 = generateMockKeys();
+            const uuid2 = generateMockUUID();
+            
+            users.user2 = { keys: keys2, uuid: uuid2, name: 'Bob' };
+            clients.user2 = new DemoCovenantClient(baseURL, uuid2, keys2);
+            
+            // Update UI
+            updateUserDisplay();
+        }
+
+        function updateUserDisplay() {
+            // User 1
+            document.getElementById('user1-uuid').textContent = users.user1.uuid;
+            document.getElementById('user1-pubkey').textContent = users.user1.keys.pubKey;
+            document.getElementById('user1-privkey').textContent = 'Ready to sign';
+            
+            // User 2
+            document.getElementById('user2-uuid').textContent = users.user2.uuid;
+            document.getElementById('user2-pubkey').textContent = users.user2.keys.pubKey;
+            document.getElementById('user2-privkey').textContent = 'Ready to sign';
+        }
+
+        async function createDemoContract() {
+            const contractData = {
+                title: 'Demo Magical Contract',
+                description: 'A three-step workflow demonstration showcasing dual-signature authentication',
+                participants: [users.user1.uuid, users.user2.uuid],
+                steps: [
+                    {
+                        id: 'step-1',
+                        description: 'Initial project setup and requirements gathering',
+                        magicSpell: { type: 'payment', amount: 100, currency: 'MP' }
+                    },
+                    {
+                        id: 'step-2',
+                        description: 'Development phase with milestone delivery',
+                        magicSpell: { type: 'payment', amount: 500, currency: 'MP' }
+                    },
+                    {
+                        id: 'step-3',
+                        description: 'Final review, testing, and project completion',
+                        magicSpell: { type: 'reward', amount: 250, currency: 'MP' }
+                    }
+                ]
+            };
+            
+            const result = await clients.user1.createContract(contractData);
+            contract = result.data;
+            contractUuid = contract.uuid;
+            
+            updateContractDisplay();
+        }
+
+        async function refreshContract() {
+            if (!contractUuid) return;
+            
+            try {
+                const result = await clients.user1.getContract(contractUuid);
+                contract = result.data;
+                updateContractDisplay();
+            } catch (error) {
+                console.error('Failed to refresh contract:', error);
+            }
+        }
+
+        function updateContractDisplay() {
+            if (!contract) return;
+            
+            const completedSteps = contract.steps.filter(s => s.completed).length;
+            const totalSteps = contract.steps.length;
+            const progressPercent = Math.round((completedSteps / totalSteps) * 100);
+            
+            // Update progress bar
+            const progressFill = document.getElementById('progress-fill');
+            progressFill.style.width = `${progressPercent}%`;
+            progressFill.textContent = `${progressPercent}% Complete (${completedSteps}/${totalSteps})`;
+            
+            // Update contract steps
+            const contractContent = document.getElementById('contract-content');
+            
+            if (completedSteps === totalSteps) {
+                contractContent.innerHTML = `
+                    <div class="success">
+                        🎉 <strong>Contract Completed!</strong><br>
+                        All steps have been signed by both parties. The magical contract is now fully executed!
+                    </div>
+                `;
+                // Clear refresh interval
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+            } else {
+                contractContent.innerHTML = `
+                    <ol class="steps">
+                        ${contract.steps.map((step, index) => {
+                            const stepNumber = index + 1;
+                            const isCompleted = step.completed;
+                            const isCurrent = !isCompleted && (index === 0 || contract.steps[index - 1].completed);
+                            
+                            let stepClass = '';
+                            if (isCompleted) stepClass = 'completed';
+                            else if (isCurrent) stepClass = 'current';
+                            
+                            const signatures = Object.entries(step.signatures || {}).map(([userUuid, sig]) => {
+                                const userName = userUuid === users.user1.uuid ? 'Alice' : 'Bob';
+                                const isSigned = sig !== null;
+                                return `
+                                    <span class="signature ${isSigned ? 'signed' : 'pending'}">
+                                        ${isSigned ? '✓' : '⏳'} ${userName}
+                                    </span>
+                                `;
+                            }).join('');
+                            
+                            const magicSpell = step.magicSpell ? `
+                                <div class="magic-spell">
+                                    🪄 Magic: ${step.magicSpell.type} ${step.magicSpell.amount} ${step.magicSpell.currency || 'MP'}
+                                </div>
+                            ` : '';
+                            
+                            return `
+                                <li class="step ${stepClass}">
+                                    <div class="step-header">
+                                        <div class="step-number">${isCompleted ? '✓' : stepNumber}</div>
+                                        <div class="step-title">Step ${stepNumber}</div>
+                                    </div>
+                                    <div class="step-description">${step.description}</div>
+                                    <div class="signatures">${signatures}</div>
+                                    ${magicSpell}
+                                </li>
+                            `;
+                        }).join('')}
+                    </ol>
+                `;
+            }
+            
+            // Update sign buttons
+            updateSignButtons();
+        }
+
+        function updateSignButtons() {
+            if (!contract) return;
+            
+            // Find current step
+            const currentStep = contract.steps.find(s => !s.completed);
+            
+            ['user1', 'user2'].forEach(userId => {
+                const button = document.getElementById(`${userId}-sign`);
+                const status = document.getElementById(`${userId}-status`);
+                const userUuid = users[userId].uuid;
+                
+                if (!currentStep) {
+                    // Contract completed
+                    button.className = 'sign-button signed';
+                    button.textContent = '✅ Contract Complete';
+                    status.innerHTML = '<div style="color: #28a745; font-weight: 600; margin-top: 10px;">All steps signed!</div>';
+                    return;
+                }
+                
+                const hasUserSigned = currentStep.signatures[userUuid] !== null;
+                
+                if (hasUserSigned) {
+                    button.className = 'sign-button signed';
+                    button.textContent = '✅ Step Signed';
+                    status.innerHTML = '<div style="color: #17a2b8; font-weight: 600; margin-top: 10px;">Waiting for other party...</div>';
+                } else {
+                    button.className = 'sign-button active';
+                    button.textContent = `🖋️ Sign Step ${contract.steps.findIndex(s => s.id === currentStep.id) + 1}`;
+                    status.innerHTML = '<div style="color: #28a745; font-weight: 600; margin-top: 10px;">Ready to sign!</div>';
+                }
+            });
+        }
+
+        // Sign step function
+        async function signStep(userId) {
+            const button = document.getElementById(`${userId}-sign`);
+            const status = document.getElementById(`${userId}-status`);
+            
+            if (!button.classList.contains('active')) return;
+            
+            try {
+                const originalText = button.textContent;
+                button.disabled = true;
+                button.textContent = '⏳ Signing...';
+                status.innerHTML = '<div style="color: #6c757d; margin-top: 10px;">Processing signature...</div>';
+                
+                const currentStep = contract.steps.find(s => !s.completed);
+                if (!currentStep) {
+                    throw new Error('No step available to sign');
+                }
+                
+                const result = await clients[userId].signStep(contractUuid, currentStep.id);
+                
+                // Add a small delay for better UX
+                setTimeout(async () => {
+                    // Refresh contract immediately
+                    await refreshContract();
+                    button.disabled = false;
+                }, 500);
+                
+            } catch (error) {
+                console.error('Signing failed:', error);
+                status.innerHTML = `<div style="color: #dc3545; margin-top: 10px;">Error: ${error.message}</div>`;
+                button.disabled = false;
+                button.textContent = button.textContent.replace('⏳ Signing...', '🖋️ Sign Current Step');
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('contract-content').innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> ${message}<br><br>
+                    <strong>Make sure:</strong><br>
+                    • The Covenant service is running on port 3011<br>
+                    • Run: <code>cd /Users/zachbabb/Work/planet-nine/covenant && DEV=true node src/server/node/covenant.js</code>
+                </div>
+            `;
+        }
+
+        // Expose functions globally
+        window.initDemo = initDemo;
+        window.signStep = signStep;
+    </script>
+</body>
+</html>

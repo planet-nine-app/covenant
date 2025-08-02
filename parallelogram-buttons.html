@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parallelogram Button Design</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 50px;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 50px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Base Parallelogram Button (30 degrees) */
+        .parallelogram-button {
+            position: relative;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            margin: 10px; /* Extra space for skew overflow */
+            transition: all 0.3s ease;
+        }
+
+        .parallelogram-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            transform: skewX(-30deg);
+            transition: all 0.3s ease;
+        }
+
+        .parallelogram-button:hover::before {
+            background: linear-gradient(135deg, #218838, #1da598);
+            transform: skewX(-30deg) scale(1.05);
+        }
+
+        .parallelogram-button:active::before {
+            transform: skewX(-30deg) scale(0.95);
+        }
+
+        .parallelogram-button .button-content {
+            position: relative;
+            z-index: 1;
+            padding: 15px 40px;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: block;
+        }
+
+        /* Parallelogram Variations */
+        .parallelogram-secondary::before {
+            background: linear-gradient(135deg, #6f42c1, #e83e8c);
+            transform: skewX(-30deg);
+        }
+
+        .parallelogram-secondary:hover::before {
+            background: linear-gradient(135deg, #5a32a3, #d91a72);
+            transform: skewX(-30deg) scale(1.05);
+        }
+
+        /* Different skew angles */
+        .parallelogram-steep::before {
+            transform: skewX(-45deg);
+        }
+
+        .parallelogram-steep:hover::before {
+            transform: skewX(-45deg) scale(1.05);
+        }
+
+        .parallelogram-gentle::before {
+            transform: skewX(-15deg);
+        }
+
+        .parallelogram-gentle:hover::before {
+            transform: skewX(-15deg) scale(1.05);
+        }
+
+        /* Right-leaning parallelogram */
+        .parallelogram-right::before {
+            transform: skewX(30deg);
+        }
+
+        .parallelogram-right:hover::before {
+            transform: skewX(30deg) scale(1.05);
+        }
+
+        /* 3D effect parallelogram */
+        .parallelogram-3d {
+            perspective: 1000px;
+        }
+
+        .parallelogram-3d::before {
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+            transform: skewX(-30deg) rotateX(5deg);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .parallelogram-3d:hover::before {
+            transform: skewX(-30deg) rotateX(5deg) scale(1.05);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+        }
+
+        /* Animated parallelogram */
+        .parallelogram-animated::before {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            background-size: 400% 400%;
+            animation: gradientShift 4s ease-in-out infinite;
+            transform: skewX(-30deg);
+        }
+
+        .parallelogram-animated:hover::before {
+            transform: skewX(-30deg) scale(1.05);
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Glowing parallelogram */
+        .parallelogram-glow::before {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            transform: skewX(-30deg);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .parallelogram-glow:hover::before {
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.6);
+            transform: skewX(-30deg) scale(1.05);
+        }
+
+        /* Neon parallelogram */
+        .parallelogram-neon::before {
+            background: transparent;
+            border: 2px solid #00ff88;
+            transform: skewX(-30deg);
+            box-shadow: 
+                inset 0 0 20px rgba(0, 255, 136, 0.2),
+                0 0 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .parallelogram-neon .button-content {
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+        }
+
+        .parallelogram-neon:hover::before {
+            box-shadow: 
+                inset 0 0 30px rgba(0, 255, 136, 0.3),
+                0 0 30px rgba(0, 255, 136, 0.6);
+            transform: skewX(-30deg) scale(1.05);
+        }
+
+        /* Double parallelogram effect */
+        .parallelogram-double {
+            position: relative;
+        }
+
+        .parallelogram-double::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            right: -3px;
+            bottom: -3px;
+            background: rgba(255, 255, 255, 0.2);
+            transform: skewX(-30deg);
+            z-index: -1;
+            transition: all 0.3s ease;
+        }
+
+        .parallelogram-double:hover::after {
+            transform: skewX(-30deg) scale(1.05);
+        }
+
+        .description {
+            color: white;
+            text-align: center;
+            max-width: 800px;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <h1>📐 Parallelogram Button Designs 📐</h1>
+    
+    <div class="description">
+        <p>These parallelogram buttons use CSS transform skewX(-30deg) to create dynamic, slanted shapes that convey motion and modernity. The 30-degree angle creates the perfect balance between geometric interest and readability.</p>
+    </div>
+
+    <div class="button-container">
+        <button class="parallelogram-button">
+            <span class="button-content">🖋️ Sign Contract</span>
+        </button>
+
+        <button class="parallelogram-button parallelogram-secondary">
+            <span class="button-content">🚀 Initialize</span>
+        </button>
+
+        <button class="parallelogram-button parallelogram-steep">
+            <span class="button-content">⚡ Steep Angle</span>
+        </button>
+
+        <button class="parallelogram-button parallelogram-gentle">
+            <span class="button-content">🌊 Gentle Angle</span>
+        </button>
+
+        <button class="parallelogram-button parallelogram-right">
+            <span class="button-content">➡️ Right Lean</span>
+        </button>
+
+        <button class="parallelogram-button parallelogram-3d">
+            <span class="button-content">🎮 3D Effect</span>
+        </button>
+
+        <button class="parallelogram-button parallelogram-animated">
+            <span class="button-content">🌈 Animated</span>
+        </button>
+
+        <button class="parallelogram-button parallelogram-glow">
+            <span class="button-content">💫 Glowing</span>
+        </button>
+
+        <button class="parallelogram-button parallelogram-neon">
+            <span class="button-content">⚡ Neon Style</span>
+        </button>
+
+        <button class="parallelogram-button parallelogram-double">
+            <span class="button-content">🔄 Double Layer</span>
+        </button>
+    </div>
+
+    <div class="description">
+        <h3>Parallelogram Button Features:</h3>
+        <ul style="text-align: left; display: inline-block;">
+            <li><strong>Dynamic Angles:</strong> 15°, 30°, and 45° skew variations</li>
+            <li><strong>Direction Options:</strong> Left-leaning and right-leaning versions</li>
+            <li><strong>3D Effects:</strong> Perspective and shadow depth</li>
+            <li><strong>Neon Styling:</strong> Cyberpunk-inspired glow effects</li>
+            <li><strong>Motion Implied:</strong> Creates sense of forward movement</li>
+            <li><strong>Modern Appeal:</strong> Perfect for tech and gaming interfaces</li>
+        </ul>
+    </div>
+</body>
+</html>

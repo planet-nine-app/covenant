@@ -14,6 +14,8 @@ Covenant enables the creation and management of multi-step contracts that requir
 - **Beautiful Visualizations**: SVG rendering of contract status and progress
 - **BDO Storage**: Persistent contract storage via BDO service
 - **Sessionless Authentication**: Cryptographic signatures without shared secrets
+- **Dual Signature System**: Enhanced security with step-specific signatures
+- **Authorization Controls**: Creator and participant-based permissions
 
 ## Architecture
 
@@ -22,6 +24,34 @@ Covenant acts as a stateless contract state manager:
 - Immediately persists all updates to BDO
 - Serves current contract state regardless of completion status
 - Triggers MAGIC spells when steps are fully signed
+
+## Authentication
+
+Covenant uses the Planet Nine sessionless authentication protocol for all contract operations. This provides cryptographic security without requiring traditional login systems.
+
+### Authentication Requirements
+
+All authenticated endpoints require these fields:
+- `signature`: Cryptographic signature of the constructed message
+- `timestamp`: String timestamp (`new Date().getTime() + ''`)
+- `userUUID`: User's unique identifier (`sessionless.generateUUID()`)
+- `pubKey`: User's public key from sessionless key pair
+
+### Message Construction
+
+- **Contract Creation**: `timestamp + userUUID`
+- **Contract Operations**: `timestamp + userUUID + contractUUID`
+- **Step Signing**: Dual signatures required:
+  - Main auth: `timestamp + userUUID + contractUUID`
+  - Step auth: `timestamp + userUUID + contractUUID + stepId`
+
+### Authorization Model
+
+- **Contract Creation**: Any authenticated user
+- **Contract Updates**: Creator or participants only
+- **Step Signing**: Participants only
+- **Contract Deletion**: Creator only
+- **Contract Reading**: No authentication required
 
 ## API Endpoints
 
@@ -33,6 +63,10 @@ POST /contract
 Content-Type: application/json
 
 {
+  "signature": "sessionless-signature",
+  "timestamp": "1644123456789",
+  "userUUID": "uuid-creator",
+  "pubKey": "creator-public-key",
   "title": "Freelance Web Development",
   "description": "Contract for building a website",
   "participants": ["uuid-alice", "uuid-bob"],
@@ -50,6 +84,8 @@ Content-Type: application/json
 }
 ```
 
+**Authentication**: All contract endpoints require sessionless authentication with message format: `timestamp + userUUID` (for creation) or `timestamp + userUUID + contractUUID` (for updates).
+
 #### Get Contract
 ```http
 GET /contract/{uuid}
@@ -61,10 +97,16 @@ PUT /contract/{uuid}
 Content-Type: application/json
 
 {
+  "signature": "sessionless-signature",
+  "timestamp": "1644123456789",
+  "userUUID": "uuid-participant",
+  "pubKey": "participant-public-key",
   "title": "Updated Contract Title",
   "status": "active"
 }
 ```
+
+**Authorization**: Only the contract creator or participants can update contracts.
 
 #### Sign Contract Step
 ```http
@@ -72,13 +114,20 @@ PUT /contract/{uuid}/sign
 Content-Type: application/json
 
 {
-  "participant_uuid": "uuid-alice",
+  "signature": "sessionless-signature",
+  "timestamp": "1644123456789",
+  "userUUID": "uuid-participant",
+  "pubKey": "participant-public-key",
   "step_id": "step-1",
-  "signature": "cryptographic-signature",
-  "timestamp": 1644123456789,
-  "message": "Step completed successfully"
+  "step_signature": "step-specific-signature"
 }
 ```
+
+**Dual Signatures**: 
+- Main signature: `timestamp + userUUID + contractUUID`
+- Step signature: `timestamp + userUUID + contractUUID + stepId`
+
+**Authorization**: Only contract participants can sign steps.
 
 #### List Contracts
 ```http
@@ -89,7 +138,17 @@ GET /contracts?participant=uuid-alice
 #### Delete Contract
 ```http
 DELETE /contract/{uuid}
+Content-Type: application/json
+
+{
+  "signature": "sessionless-signature",
+  "timestamp": "1644123456789",
+  "userUUID": "uuid-creator",
+  "pubKey": "creator-public-key"
+}
 ```
+
+**Authorization**: Only the contract creator can delete contracts.
 
 ### Visualization
 
@@ -130,9 +189,11 @@ GET /health
       "order": 0,
       "signatures": {
         "uuid-1": {
-          "signature": "crypto-signature",
-          "timestamp": 1644123456789,
-          "message": "Completion message"
+          "signature": "step-signature",
+          "timestamp": "1644123456789",
+          "pubKey": "participant-public-key",
+          "message": "timestamp+userUUID+contractUUID+stepId",
+          "signed_at": "1644123456789"
         },
         "uuid-2": null // Not yet signed
       },
@@ -143,8 +204,9 @@ GET /health
   ],
   "product_uuid": "optional-product-uuid",
   "bdo_location": "bdo-storage-uuid",
-  "created_at": "2024-01-01T00:00:00Z",
-  "updated_at": "2024-01-01T00:00:00Z",
+  "created_at": "1644123456789",
+  "updated_at": "1644123456789",
+  "creator": "uuid-creator",
   "status": "active"
 }
 ```
@@ -155,24 +217,46 @@ GET /health
 
 ```javascript
 const CovenantClient = require('./src/client/javascript/covenant');
+const sessionless = require('sessionless-node');
 
+// Initialize client with sessionless instance
 const client = new CovenantClient('http://localhost:3011', sessionless);
 
-// Create contract
+// Set user UUID for authentication
+client.setUserUUID('your-user-uuid');
+
+// Create contract (automatically authenticated)
 const contract = await client.createContract({
   title: 'My Contract',
-  participants: ['uuid-1', 'uuid-2'],
+  participants: ['uuid-1', 'uuid-2', 'your-user-uuid'],
   steps: [
     { description: 'First step' },
     { description: 'Second step' }
   ]
 });
 
-// Sign a step
-await client.signStep(contract.data.uuid, 'step-1', 'Step completed!');
+// Sign a step (dual signatures automatically handled)
+await client.signStep(contract.data.uuid, 'step-1');
 
-// Get contract as SVG
+// Update contract (authenticated)
+await client.updateContract(contract.data.uuid, { 
+  title: 'Updated Contract Title' 
+});
+
+// Delete contract (creator only)
+await client.deleteContract(contract.data.uuid);
+
+// Get contract as SVG (no auth required)
 const svg = await client.getContractSVG(contract.data.uuid, { theme: 'dark' });
+```
+
+**Authentication Setup**:
+```javascript
+// The client automatically:
+// 1. Gets keys from sessionless instance
+// 2. Creates signed payloads for all authenticated endpoints
+// 3. Handles dual signatures for step signing
+// 4. Validates you're authorized for each operation
 ```
 
 ### Rust Client
@@ -302,16 +386,19 @@ Common error cases:
 ## Testing
 
 Comprehensive test suite covering:
-- Contract CRUD operations
-- Multi-party signature workflows
-- SVG generation
-- Error conditions
-- Edge cases
+- Contract CRUD operations with sessionless authentication
+- Multi-party signature workflows with dual signatures
+- Authorization and permission checks
+- SVG generation and themes
+- Error conditions and edge cases
+- Sessionless authentication integration
 
 Run tests:
 ```bash
 npm test
 ```
+
+**Testing Authentication**: The test suite automatically generates sessionless keys and handles authentication for all endpoints, providing examples of proper sessionless integration.
 
 ## License
 

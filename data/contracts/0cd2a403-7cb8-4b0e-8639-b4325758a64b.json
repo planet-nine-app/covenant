@@ -1,0 +1,29 @@
+{
+  "uuid": "0cd2a403-7cb8-4b0e-8639-b4325758a64b",
+  "title": "Contract to Delete",
+  "description": "This contract will be deleted in the test",
+  "participants": [
+    "uuid-delete-test-1",
+    "2d4860e5-aa12-42af-a83c-aba2832a0faa"
+  ],
+  "steps": [
+    {
+      "id": "delete-step-1",
+      "description": "Step in contract to be deleted",
+      "magic_spell": null,
+      "order": 0,
+      "signatures": {
+        "uuid-delete-test-1": null,
+        "2d4860e5-aa12-42af-a83c-aba2832a0faa": null
+      },
+      "completed": false,
+      "created_at": "1754011046862"
+    }
+  ],
+  "product_uuid": null,
+  "bdo_location": null,
+  "created_at": "1754011046862",
+  "updated_at": "1754011046862",
+  "status": "active",
+  "creator": "2d4860e5-aa12-42af-a83c-aba2832a0faa"
+}

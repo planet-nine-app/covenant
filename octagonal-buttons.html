@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Octagonal Button Design</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 50px;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 50px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Octagonal Button */
+        .octagonal-button {
+            position: relative;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: all 0.3s ease;
+        }
+
+        .octagonal-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            clip-path: polygon(
+                20px 0%, 
+                calc(100% - 20px) 0%, 
+                100% 20px, 
+                100% calc(100% - 20px), 
+                calc(100% - 20px) 100%, 
+                20px 100%, 
+                0% calc(100% - 20px), 
+                0% 20px
+            );
+            transition: all 0.3s ease;
+        }
+
+        .octagonal-button:hover::before {
+            background: linear-gradient(135deg, #218838, #1da598);
+            transform: scale(1.05);
+        }
+
+        .octagonal-button:active::before {
+            transform: scale(0.95);
+        }
+
+        .octagonal-button .button-content {
+            position: relative;
+            z-index: 1;
+            padding: 15px 30px;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Octagonal Button Variations */
+        .octagonal-secondary::before {
+            background: linear-gradient(135deg, #6f42c1, #e83e8c);
+        }
+
+        .octagonal-secondary:hover::before {
+            background: linear-gradient(135deg, #5a32a3, #d91a72);
+        }
+
+        .octagonal-warning::before {
+            background: linear-gradient(135deg, #fd7e14, #ffc107);
+        }
+
+        .octagonal-warning:hover::before {
+            background: linear-gradient(135deg, #e8650e, #e0a800);
+        }
+
+        /* Different octagonal cuts */
+        .octagonal-sharp::before {
+            clip-path: polygon(
+                30px 0%, 
+                calc(100% - 30px) 0%, 
+                100% 30px, 
+                100% calc(100% - 30px), 
+                calc(100% - 30px) 100%, 
+                30px 100%, 
+                0% calc(100% - 30px), 
+                0% 30px
+            );
+        }
+
+        .octagonal-subtle::before {
+            clip-path: polygon(
+                10px 0%, 
+                calc(100% - 10px) 0%, 
+                100% 10px, 
+                100% calc(100% - 10px), 
+                calc(100% - 10px) 100%, 
+                10px 100%, 
+                0% calc(100% - 10px), 
+                0% 10px
+            );
+        }
+
+        /* Animated octagonal button */
+        .octagonal-animated {
+            animation: octagonPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes octagonPulse {
+            0%, 100% { 
+                transform: scale(1); 
+            }
+            50% { 
+                transform: scale(1.02); 
+            }
+        }
+
+        .octagonal-animated::before {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            background-size: 400% 400%;
+            animation: gradientShift 4s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Glowing octagonal button */
+        .octagonal-glow::before {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .octagonal-glow:hover::before {
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .description {
+            color: white;
+            text-align: center;
+            max-width: 800px;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <h1>🔸 Octagonal Button Designs 🔸</h1>
+    
+    <div class="description">
+        <p>These octagonal buttons use CSS clip-path to create geometric shapes with three angled sides on each side, connected by straight top and bottom edges. The design creates a modern, tech-forward aesthetic perfect for futuristic interfaces.</p>
+    </div>
+
+    <div class="button-container">
+        <button class="octagonal-button">
+            <span class="button-content">🖋️ Sign Contract</span>
+        </button>
+
+        <button class="octagonal-button octagonal-secondary">
+            <span class="button-content">🚀 Initialize</span>
+        </button>
+
+        <button class="octagonal-button octagonal-warning">
+            <span class="button-content">⚠️ Warning</span>
+        </button>
+
+        <button class="octagonal-button octagonal-sharp">
+            <span class="button-content">⚡ Sharp Cut</span>
+        </button>
+
+        <button class="octagonal-button octagonal-subtle">
+            <span class="button-content">✨ Subtle Cut</span>
+        </button>
+
+        <button class="octagonal-button octagonal-animated">
+            <span class="button-content">🌈 Animated</span>
+        </button>
+
+        <button class="octagonal-button octagonal-glow">
+            <span class="button-content">💫 Glowing</span>
+        </button>
+    </div>
+
+    <div class="description">
+        <h3>Octagonal Button Features:</h3>
+        <ul style="text-align: left; display: inline-block;">
+            <li><strong>Geometric Precision:</strong> Perfect octagonal shape with CSS clip-path</li>
+            <li><strong>Hover Effects:</strong> Scale and color transitions</li>
+            <li><strong>Multiple Variations:</strong> Different cut depths and styles</li>
+            <li><strong>Modern Aesthetic:</strong> Clean, futuristic design</li>
+            <li><strong>Responsive:</strong> Scales beautifully on all devices</li>
+        </ul>
+    </div>
+</body>
+</html>

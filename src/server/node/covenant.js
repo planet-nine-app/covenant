@@ -3,20 +3,24 @@
  * Part of the Planet Nine ecosystem
  */
 
-const express = require('express');
-const cors = require('cors');
-const rateLimit = require('express-rate-limit');
-const helmet = require('helmet');
-const { v4: uuidv4 } = require('uuid');
-const fs = require('fs').promises;
-const path = require('path');
+import express from 'express';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import sessionless from 'sessionless-node';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import bdo from 'bdo-js';
 
 const app = express();
 const PORT = process.env.PORT || 3011;
 const isDev = process.env.DEV === 'true' || process.env.NODE_ENV === 'development';
 
+// BDO Configuration
+const BDO_URL = process.env.BDO_URL || 'http://127.0.0.1:3003/';
+bdo.baseURL = BDO_URL;
+
 // Middleware
-app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
@@ -28,16 +32,50 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Setup paths for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Storage setup
 const dataDir = path.join(__dirname, '../../../data');
 const contractsDir = path.join(dataDir, 'contracts');
+const keysDir = path.join(dataDir, 'keys');
 
 async function ensureDirectories() {
   try {
     await fs.mkdir(dataDir, { recursive: true });
     await fs.mkdir(contractsDir, { recursive: true });
+    await fs.mkdir(keysDir, { recursive: true });
   } catch (error) {
     console.error('Failed to create directories:', error);
+  }
+}
+
+// BDO Key Management
+let serverKeys = null;
+
+async function saveKeys(keys) {
+  const keyPath = path.join(keysDir, 'covenant-server.json');
+  await fs.writeFile(keyPath, JSON.stringify(keys, null, 2));
+  serverKeys = keys;
+}
+
+async function getKeys() {
+  if (serverKeys) return serverKeys;
+  
+  try {
+    const keyPath = path.join(keysDir, 'covenant-server.json');
+    const keyData = await fs.readFile(keyPath, 'utf8');
+    serverKeys = JSON.parse(keyData);
+    return serverKeys;
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      // Generate new keys if none exist
+      const keys = await sessionless.generateKeys(saveKeys, getKeys);
+      console.log('Generated new server keys for BDO access');
+      return keys;
+    }
+    throw error;
   }
 }
 
@@ -71,8 +109,8 @@ function validateSignature(signature) {
     return 'Signature must include participant_uuid';
   }
   
-  if (!signature.step_id || typeof signature.step_id !== 'string') {
-    return 'Signature must include step_id';
+  if (!signature.stepId || typeof signature.stepId !== 'string') {
+    return 'Signature must include stepId';
   }
   
   if (!signature.signature || typeof signature.signature !== 'string') {
@@ -120,19 +158,88 @@ async function listContracts() {
             uuid: contract.uuid,
             title: contract.title,
             participants: contract.participants,
-            created_at: contract.created_at,
-            updated_at: contract.updated_at,
-            step_count: contract.steps.length,
-            completed_steps: contract.steps.filter(s => s.completed).length
+            createdAt: contract.created_at,
+            updatedAt: contract.updated_at,
+            stepCount: contract.steps.length,
+            completedSteps: contract.steps.filter(s => s.completed).length
           });
         }
       }
     }
     
-    return contracts.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+    return contracts.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
   } catch (error) {
     console.error('Failed to list contracts:', error);
     return [];
+  }
+}
+
+// BDO Storage Functions
+async function saveContractToBDO(contract) {
+  try {
+    const hash = contract.uuid; // Use contract UUID as BDO hash
+    
+    // First, get or create BDO user for this contract
+    let bdoUuid;
+    try {
+      // Try to create a new BDO user for this contract
+      bdoUuid = await bdo.createUser(hash, contract, saveKeys, getKeys);
+      console.log(`Created BDO user ${bdoUuid} for contract ${contract.uuid}`);
+    } catch (error) {
+      console.log('Failed to create BDO user, attempting update:', error.message);
+      // If creation fails, try to update existing
+      const keys = await getKeys();
+      const bdoResult = await bdo.getBDO(contract.bdoUuid || bdoUuid, hash, keys.pubKey);
+      if (bdoResult && bdoResult.uuid) {
+        bdoUuid = bdoResult.uuid;
+      } else {
+        throw new Error('Failed to create or find BDO user for contract');
+      }
+    }
+    
+    // Update contract with BDO UUID and make it public
+    contract.bdoUuid = bdoUuid;
+    
+    // Update the BDO with pub: true for public access
+    await bdo.updateBDO(bdoUuid, hash, contract, true);
+    
+    console.log(`Saved contract ${contract.uuid} to BDO as ${bdoUuid} (public)`);
+    
+    // Also save locally as backup
+    await saveContract(contract);
+    
+    return contract;
+  } catch (error) {
+    console.error('Failed to save contract to BDO:', error);
+    // Fallback to local storage only
+    return await saveContract(contract);
+  }
+}
+
+async function loadContractFromBDO(uuid) {
+  try {
+    // First try to load from local storage to get BDO info
+    const localContract = await loadContract(uuid);
+    if (!localContract || !localContract.bdoUuid) {
+      return localContract; // Return local copy if no BDO info
+    }
+    
+    // Load from BDO using the stored BDO UUID
+    const hash = uuid;
+    const keys = await getKeys();
+    const bdoResult = await bdo.getBDO(localContract.bdoUuid, hash, keys.pubKey);
+    
+    if (bdoResult && bdoResult.bdo) {
+      console.log(`Loaded contract ${uuid} from BDO`);
+      return bdoResult.bdo;
+    } else {
+      console.log(`Failed to load from BDO, using local copy for ${uuid}`);
+      return localContract;
+    }
+  } catch (error) {
+    console.error('Failed to load contract from BDO:', error);
+    // Fallback to local storage
+    return await loadContract(uuid);
   }
 }
 
@@ -148,31 +255,65 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Sessionless authentication middleware for contract endpoints
+async function verifySessionlessAuth(req, res, contractUUID = null) {
+  const { signature, timestamp, userUUID, pubKey } = req.body;
+  
+  if (!signature || !timestamp || !userUUID || !pubKey) {
+    res.status(401).json({
+      success: false,
+      error: 'Missing authentication fields: signature, timestamp, userUUID, and pubKey required'
+    });
+    return null;  
+  }
+  
+  // Construct message: timestamp + userUUID + contractUUID (if provided)
+  const message = contractUUID 
+    ? timestamp + userUUID + contractUUID
+    : timestamp + userUUID;
+  
+  const verified = await sessionless.verifySignature(signature, message, pubKey);
+  if (!verified) {
+    res.status(401).json({
+      success: false,
+      error: 'Invalid signature'
+    });
+    return null;
+  }
+  
+  return { message, signature, pubKey, userUUID, timestamp };
+}
+
 // Create new magical contract
 app.post('/contract', async (req, res) => {
   try {
+    // Verify sessionless authentication
+    const auth = await verifySessionlessAuth(req, res);
+    if (!auth) return; // Response already sent by verifySessionlessAuth
+    
     const { title, description, participants, steps, product_uuid, bdo_location } = req.body;
     
     // Build contract object
     const contract = {
-      uuid: uuidv4(),
+      uuid: sessionless.generateUUID(),
       title,
       description: description || '',
       participants: participants || [],
       steps: (steps || []).map((step, index) => ({
-        id: step.id || `step-${index + 1}`,
+        id: step.id || sessionless.generateUUID(),
         description: step.description,
-        magic_spell: step.magic_spell || null,
+        magicSpell: step.magicSpell || step.magic_spell || null,
         order: index,
         signatures: {},
         completed: false,
-        created_at: new Date().toISOString()
+        createdAt: new Date().getTime() + ''
       })),
-      product_uuid: product_uuid || null,
-      bdo_location: bdo_location || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      status: 'active'
+      productUuid: product_uuid || null,
+      bdoLocation: bdo_location || null,
+      createdAt: new Date().getTime() + '',
+      updatedAt: new Date().getTime() + '',
+      status: 'active',
+      creator: auth.userUUID
     };
     
     // Validate contract
@@ -191,10 +332,10 @@ app.post('/contract', async (req, res) => {
       });
     });
     
-    // Save contract
-    await saveContract(contract);
+    // Save contract to BDO (with local backup)
+    await saveContractToBDO(contract);
     
-    console.log(`Created contract: ${contract.uuid} - "${contract.title}"`);
+    console.log(`Created contract: ${contract.uuid} - "${contract.title}" (saved to BDO)`);
     
     res.json({
       success: true,
@@ -214,7 +355,7 @@ app.post('/contract', async (req, res) => {
 app.get('/contract/:uuid', async (req, res) => {
   try {
     const { uuid } = req.params;
-    const contract = await loadContract(uuid);
+    const contract = await loadContractFromBDO(uuid);
     
     if (!contract) {
       return res.status(404).json({
@@ -241,15 +382,30 @@ app.get('/contract/:uuid', async (req, res) => {
 app.put('/contract/:uuid', async (req, res) => {
   try {
     const { uuid } = req.params;
-    const updates = req.body;
     
-    const contract = await loadContract(uuid);
+    // Verify sessionless authentication with contract UUID
+    const auth = await verifySessionlessAuth(req, res, uuid);
+    if (!auth) return; // Response already sent by verifySessionlessAuth
+    
+    const contract = await loadContractFromBDO(uuid);
     if (!contract) {
       return res.status(404).json({
         success: false,
         error: 'Contract not found'
       });
     }
+    
+    // Verify user is authorized to update this contract (creator or participant)
+    const isAuthorized = contract.creator === auth.userUUID || 
+                         contract.participants.includes(auth.userUUID);
+    if (!isAuthorized) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to update this contract'
+      });
+    }
+    
+    const updates = req.body;
     
     // Update allowed fields
     const allowedFields = ['title', 'description', 'steps', 'status'];
@@ -259,7 +415,7 @@ app.put('/contract/:uuid', async (req, res) => {
       }
     });
     
-    contract.updated_at = new Date().toISOString();
+    contract.updatedAt = new Date().getTime() + '';
     
     // Validate updated contract
     const validationError = validateContract(contract);
@@ -270,9 +426,9 @@ app.put('/contract/:uuid', async (req, res) => {
       });
     }
     
-    await saveContract(contract);
+    await saveContractToBDO(contract);
     
-    console.log(`Updated contract: ${contract.uuid}`);
+    console.log(`Updated contract: ${contract.uuid} (saved to BDO)`);
     
     res.json({
       success: true,
@@ -292,18 +448,12 @@ app.put('/contract/:uuid', async (req, res) => {
 app.put('/contract/:uuid/sign', async (req, res) => {
   try {
     const { uuid } = req.params;
-    const signatureData = req.body;
     
-    // Validate signature data
-    const validationError = validateSignature(signatureData);
-    if (validationError) {
-      return res.status(400).json({
-        success: false,
-        error: validationError
-      });
-    }
+    // Verify sessionless authentication with contract UUID
+    const auth = await verifySessionlessAuth(req, res, uuid);
+    if (!auth) return; // Response already sent by verifySessionlessAuth
     
-    const contract = await loadContract(uuid);
+    const contract = await loadContractFromBDO(uuid);
     if (!contract) {
       return res.status(404).json({
         success: false,
@@ -311,8 +461,25 @@ app.put('/contract/:uuid/sign', async (req, res) => {
       });
     }
     
+    // Verify participant is part of contract
+    if (!contract.participants.includes(auth.userUUID)) {
+      return res.status(403).json({
+        success: false,
+        error: 'User not authorized for this contract'
+      });
+    }
+    
+    const { stepId, stepSignature } = req.body;
+    
+    if (!stepId || !stepSignature) {
+      return res.status(400).json({
+        success: false,
+        error: 'stepId and stepSignature are required'
+      });
+    }
+    
     // Find the step
-    const step = contract.steps.find(s => s.id === signatureData.step_id);
+    const step = contract.steps.find(s => s.id === stepId);
     if (!step) {
       return res.status(404).json({
         success: false,
@@ -320,19 +487,23 @@ app.put('/contract/:uuid/sign', async (req, res) => {
       });
     }
     
-    // Verify participant is part of contract
-    if (!contract.participants.includes(signatureData.participant_uuid)) {
-      return res.status(403).json({
+    // Verify the step signature
+    const stepMessage = auth.timestamp + auth.userUUID + uuid + stepId;
+    const stepVerified = await sessionless.verifySignature(stepSignature, stepMessage, auth.pubKey);
+    if (!stepVerified) {
+      return res.status(401).json({
         success: false,
-        error: 'Participant not authorized for this contract'
+        error: 'Invalid step signature'
       });
     }
     
     // Add signature
-    step.signatures[signatureData.participant_uuid] = {
-      signature: signatureData.signature,
-      timestamp: signatureData.timestamp,
-      message: signatureData.message || `Signed step: ${step.description}`
+    step.signatures[auth.userUUID] = {
+      signature: stepSignature,
+      timestamp: auth.timestamp,
+      pubKey: auth.pubKey,
+      message: stepMessage,
+      signed_at: new Date().getTime() + ''
     };
     
     // Check if step is now completed (all participants have signed)
@@ -342,27 +513,27 @@ app.put('/contract/:uuid/sign', async (req, res) => {
     
     if (allSigned && !step.completed) {
       step.completed = true;
-      step.completed_at = new Date().toISOString();
+      step.completedAt = new Date().getTime() + '';
       
       // TODO: Trigger MAGIC spell if present
-      if (step.magic_spell) {
-        console.log(`🪄 Step completed! Would trigger MAGIC spell:`, step.magic_spell);
+      if (step.magicSpell) {
+        console.log(`🪄 Step completed! Would trigger MAGIC spell:`, step.magicSpell);
         // Integration with MAGIC service would go here
       }
     }
     
-    contract.updated_at = new Date().toISOString();
-    await saveContract(contract);
+    contract.updatedAt = new Date().getTime() + '';
+    await saveContractToBDO(contract);
     
-    console.log(`Signature added to contract ${uuid}, step ${signatureData.step_id} by ${signatureData.participant_uuid}`);
+    console.log(`Signature added to contract ${uuid}, step ${stepId} by ${auth.userUUID} (saved to BDO)`);
     
     res.json({
       success: true,
       data: {
-        contract_uuid: uuid,
-        step_id: signatureData.step_id,
-        step_completed: step.completed,
-        magic_triggered: step.completed && !!step.magic_spell
+        contractUuid: uuid,
+        stepId: stepId,
+        stepCompleted: step.completed,
+        magicTriggered: step.completed && !!step.magicSpell
       }
     });
     
@@ -408,7 +579,7 @@ app.get('/contract/:uuid/svg', async (req, res) => {
     const { uuid } = req.params;
     const { theme = 'light', width = 800, height = 600 } = req.query;
     
-    const contract = await loadContract(uuid);
+    const contract = await loadContractFromBDO(uuid);
     if (!contract) {
       return res.status(404).json({
         success: false,
@@ -627,7 +798,11 @@ app.delete('/contract/:uuid', async (req, res) => {
   try {
     const { uuid } = req.params;
     
-    const contract = await loadContract(uuid);
+    // Verify sessionless authentication with contract UUID
+    const auth = await verifySessionlessAuth(req, res, uuid);
+    if (!auth) return; // Response already sent by verifySessionlessAuth
+    
+    const contract = await loadContractFromBDO(uuid);
     if (!contract) {
       return res.status(404).json({
         success: false,
@@ -635,10 +810,30 @@ app.delete('/contract/:uuid', async (req, res) => {
       });
     }
     
+    // Verify user is authorized to delete this contract (creator only)
+    if (contract.creator !== auth.userUUID) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only the contract creator can delete this contract'
+      });
+    }
+    
+    // Delete from BDO if possible
+    if (contract.bdoUuid) {
+      try {
+        const hash = uuid;
+        await bdo.deleteUser(contract.bdoUuid, hash);
+        console.log(`Deleted contract ${uuid} from BDO`);
+      } catch (error) {
+        console.error('Failed to delete from BDO:', error);
+      }
+    }
+    
+    // Delete local file
     const filePath = path.join(contractsDir, `${uuid}.json`);
     await fs.unlink(filePath);
     
-    console.log(`Deleted contract: ${uuid}`);
+    console.log(`Deleted contract: ${uuid} by ${auth.userUUID}`);
     
     res.json({
       success: true,
@@ -675,10 +870,19 @@ app.use((req, res) => {
 const startServer = async () => {
   await ensureDirectories();
   
+  // Initialize server keys for BDO access
+  try {
+    await getKeys();
+    console.log('✅ Server keys initialized for BDO access');
+  } catch (error) {
+    console.error('⚠️  Failed to initialize server keys:', error);
+  }
+  
   app.listen(PORT, () => {
     console.log(`🪄 Covenant service running on port ${PORT}`);
     console.log(`Environment: ${isDev ? 'development' : 'production'}`);
     console.log(`Data directory: ${dataDir}`);
+    console.log(`BDO URL: ${BDO_URL}`);
   });
 };
 
@@ -687,4 +891,4 @@ startServer().catch(error => {
   process.exit(1);
 });
 
-module.exports = app;
+// ES modules - no need for module.exports
