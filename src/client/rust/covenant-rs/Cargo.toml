@@ -13,7 +13,7 @@ reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1.0", features = ["full"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-sessionless = { path = "../../../../sessionless/rust/sessionless-rs" }
+sessionless = { path = "../../../../../sessionless/src/rust/crate" }
 
 [dev-dependencies]
 tokio-test = "0.4"
