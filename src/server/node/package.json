@@ -1,0 +1,22 @@
+{
+  "name": "covenant-node",
+  "version": "0.0.1",
+  "description": "server for covenant magical contracts",
+  "keywords": [
+    "planet-nine",
+    "magic",
+    "teleportation",
+    "contract"
+  ],
+  "license": "MIT",
+  "author": "planetnineisaspaceship",
+  "type": "module",
+  "main": "covenant.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "bdo-js": "^0.0.6",
+    "sessionless-node": "^0.11.0"
+  }
+}

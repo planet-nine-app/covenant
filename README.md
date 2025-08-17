@@ -1,10 +1,16 @@
 # Covenant - Magical Contract Management Service
 
-A Planet Nine ecosystem service for managing magical contracts with multi-party signatures and MAGIC spell execution.
+A Planet Nine ecosystem service for managing magical contracts with per-contract key isolation, automatic SVG generation, and distributed BDO storage.
 
 ## Overview
 
-Covenant enables the creation and management of multi-step contracts that require signatures from multiple participants. Each contract step can have an attached MAGIC spell that triggers when all participants have signed the step completion.
+Covenant enables the creation and management of multi-step contracts with advanced security features. Each contract gets its own cryptographic keys, beautiful visual representations, and distributed storage. Contracts require signatures from multiple participants and can trigger MAGIC spells on completion.
+
+**🎉 Latest Features (January 2025):**
+- **Per-Contract Key Management**: Each contract uses unique secp256k1 keys for maximum security isolation
+- **Automatic SVG Generation**: Beautiful parchment-style visual representations in light and dark themes
+- **BDO Integration**: Complete contract data + visuals stored in distributed Big Dumb Object storage
+- **Production Ready**: Full authentication with continuebee and fount integration
 
 ## Features
 

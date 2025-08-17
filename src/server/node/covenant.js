@@ -51,31 +51,109 @@ async function ensureDirectories() {
   }
 }
 
-// BDO Key Management
-let serverKeys = null;
+// BDO Key Management - Per Contract
+const keyCache = new Map(); // Cache keys in memory for performance
+const contractPubKeyMap = new Map(); // Cache contract UUID -> pubKey mapping
 
 async function saveKeys(keys) {
-  const keyPath = path.join(keysDir, 'covenant-server.json');
+  const pubKey = keys.pubKey;
+  const keyPath = path.join(keysDir, `${pubKey}.json`);
   await fs.writeFile(keyPath, JSON.stringify(keys, null, 2));
-  serverKeys = keys;
+  keyCache.set(pubKey, keys);
+  console.log(`💾 Saved keys for pubKey: ${pubKey.substring(0, 16)}...`);
 }
 
-async function getKeys() {
-  if (serverKeys) return serverKeys;
+async function getKeys(pubKey) {
+  if (!pubKey) {
+    throw new Error('pubKey is required for key lookup');
+  }
+  
+  console.log(`🔍 getKeys called with pubKey: ${pubKey.substring(0, 16)}...`);
+  
+  // Check cache first
+  if (keyCache.has(pubKey)) {
+    const cachedKeys = keyCache.get(pubKey);
+    console.log(`📋 Retrieved from cache - pubKey: ${cachedKeys.pubKey?.substring(0, 16)}..., hasPrivateKey: ${!!cachedKeys.privateKey}`);
+    return cachedKeys;
+  }
   
   try {
-    const keyPath = path.join(keysDir, 'covenant-server.json');
+    const keyPath = path.join(keysDir, `${pubKey}.json`);
     const keyData = await fs.readFile(keyPath, 'utf8');
-    serverKeys = JSON.parse(keyData);
-    return serverKeys;
+    const keys = JSON.parse(keyData);
+    keyCache.set(pubKey, keys);
+    console.log(`💾 Loaded from disk - pubKey: ${keys.pubKey?.substring(0, 16)}..., hasPrivateKey: ${!!keys.privateKey}, keyStructure:`, Object.keys(keys));
+    return keys;
   } catch (error) {
+    console.error(`❌ Failed to load keys for pubKey ${pubKey.substring(0, 16)}...:`, error.message);
     if (error.code === 'ENOENT') {
-      // Generate new keys if none exist
-      const keys = await sessionless.generateKeys(saveKeys, getKeys);
-      console.log('Generated new server keys for BDO access');
-      return keys;
+      throw new Error(`Keys not found for pubKey: ${pubKey}`);
     }
     throw error;
+  }
+}
+
+// Contract UUID to pubKey mapping
+async function saveContractPubKeyMapping(contractUuid, pubKey) {
+  const mappingPath = path.join(keysDir, 'contract-pubkey-mapping.json');
+  let mappings = {};
+  
+  try {
+    const data = await fs.readFile(mappingPath, 'utf8');
+    mappings = JSON.parse(data);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  
+  mappings[contractUuid] = pubKey;
+  contractPubKeyMap.set(contractUuid, pubKey);
+  
+  await fs.writeFile(mappingPath, JSON.stringify(mappings, null, 2));
+  console.log(`🔗 Mapped contract ${contractUuid} to pubKey ${pubKey.substring(0, 16)}...`);
+}
+
+async function getContractPubKey(contractUuid) {
+  // Check cache first
+  if (contractPubKeyMap.has(contractUuid)) {
+    return contractPubKeyMap.get(contractUuid);
+  }
+  
+  try {
+    const mappingPath = path.join(keysDir, 'contract-pubkey-mapping.json');
+    const data = await fs.readFile(mappingPath, 'utf8');
+    const mappings = JSON.parse(data);
+    
+    const pubKey = mappings[contractUuid];
+    if (pubKey) {
+      contractPubKeyMap.set(contractUuid, pubKey);
+      return pubKey;
+    }
+    
+    throw new Error(`No pubKey mapping found for contract: ${contractUuid}`);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new Error(`Contract pubKey mapping file not found`);
+    }
+    throw error;
+  }
+}
+
+// Load all mappings on startup
+async function loadContractPubKeyMappings() {
+  try {
+    const mappingPath = path.join(keysDir, 'contract-pubkey-mapping.json');
+    const data = await fs.readFile(mappingPath, 'utf8');
+    const mappings = JSON.parse(data);
+    
+    for (const [contractUuid, pubKey] of Object.entries(mappings)) {
+      contractPubKeyMap.set(contractUuid, pubKey);
+    }
+    
+    console.log(`📋 Loaded ${Object.keys(mappings).length} contract->pubKey mappings`);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.error('Failed to load contract pubKey mappings:', error);
+    }
   }
 }
 
@@ -161,7 +239,9 @@ async function listContracts() {
             createdAt: contract.created_at,
             updatedAt: contract.updated_at,
             stepCount: contract.steps.length,
-            completedSteps: contract.steps.filter(s => s.completed).length
+            completedSteps: contract.steps.filter(s => s.completed).length,
+            bdoUuid: contract.bdoUuid, // Include BDO UUID for client access
+            pubKey: contract.pubKey // Include pubKey for BDO authentication
           });
         }
       }
@@ -179,31 +259,101 @@ async function saveContractToBDO(contract) {
   try {
     const hash = contract.uuid; // Use contract UUID as BDO hash
     
-    // First, get or create BDO user for this contract
+    // Generate unique keys for this contract
+    const contractKeys = await sessionless.generateKeys(saveKeys, async (pubKey) => getKeys(pubKey));
+    
+    // Save the contract UUID -> pubKey mapping
+    await saveContractPubKeyMapping(contract.uuid, contractKeys.pubKey);
+    
+    // Store pubKey in contract for easy access
+    contract.pubKey = contractKeys.pubKey;
+    
+    // Create BDO user for this contract using the contract's keys
     let bdoUuid;
     try {
-      // Try to create a new BDO user for this contract
-      bdoUuid = await bdo.createUser(hash, contract, saveKeys, getKeys);
-      console.log(`Created BDO user ${bdoUuid} for contract ${contract.uuid}`);
+      // Set up sessionless to use our contract keys globally for this BDO operation
+      const originalGetKeys = sessionless.getKeys;
+      sessionless.getKeys = async () => contractKeys;
+      
+      // BDO's createUser will call sessionless.generateKeys() but we want it to use our keys
+      const bdoSaveKeys = async (keys) => {
+        console.log(`🔑 bdoSaveKeys called - BDO wants to save keys, returning our contract keys instead`);
+        // BDO expects to save the generated keys, but we return our contract keys
+        return contractKeys;
+      };
+      
+      const bdoGetKeys = async () => {
+        console.log(`🔑 bdoGetKeys called - returning our contract keys`);
+        return contractKeys;
+      };
+      
+      console.log(`🚀 Calling bdo.createUser with hash: ${hash}, using contractKeys.pubKey: ${contractKeys.pubKey.substring(0, 16)}... for authentication`);
+      bdoUuid = await bdo.createUser(hash, contract, bdoSaveKeys, bdoGetKeys);
+      console.log(`✅ Created BDO user ${bdoUuid} for contract ${contract.uuid} using contract pubKey ${contractKeys.pubKey.substring(0, 16)}...`);
+      
+      // Restore original sessionless getKeys
+      sessionless.getKeys = originalGetKeys;
     } catch (error) {
+      // Restore sessionless getKeys in error case too
+      sessionless.getKeys = originalGetKeys;
+      
       console.log('Failed to create BDO user, attempting update:', error.message);
       // If creation fails, try to update existing
-      const keys = await getKeys();
-      const bdoResult = await bdo.getBDO(contract.bdoUuid || bdoUuid, hash, keys.pubKey);
-      if (bdoResult && bdoResult.uuid) {
-        bdoUuid = bdoResult.uuid;
-      } else {
-        throw new Error('Failed to create or find BDO user for contract');
+      try {
+        const bdoResult = await bdo.getBDO(contract.bdoUuid || bdoUuid, hash);
+        if (bdoResult && bdoResult.uuid) {
+          bdoUuid = bdoResult.uuid;
+        } else {
+          throw new Error('Failed to create or find BDO user for contract');
+        }
+      } catch (getBdoError) {
+        throw new Error(`Failed to create or find BDO user for contract: ${getBdoError.message}`);
       }
     }
     
     // Update contract with BDO UUID and make it public
     contract.bdoUuid = bdoUuid;
     
-    // Update the BDO with pub: true for public access
-    await bdo.updateBDO(bdoUuid, hash, contract, true);
+    // Generate beautiful SVG representation for cross-service access
+    console.log(`🎨 Generating SVG representation for contract ${contract.uuid}...`);
+    try {
+      const lightSvg = generateContractSVG(contract, { theme: 'light', width: 800, height: 600 });
+      const darkSvg = generateContractSVG(contract, { theme: 'dark', width: 800, height: 600 });
+      
+      // Add SVG representations to contract data
+      contract.svg = {
+        light: lightSvg,
+        dark: darkSvg,
+        generated_at: new Date().toISOString()
+      };
+      
+      console.log(`✅ Generated light and dark theme SVGs for contract ${contract.uuid}`);
+    } catch (svgError) {
+      console.log(`⚠️ Failed to generate SVG: ${svgError.message}`);
+      // Continue without SVG if generation fails
+    }
     
-    console.log(`Saved contract ${contract.uuid} to BDO as ${bdoUuid} (public)`);
+    // Update BDO with the contract data (including SVGs) using contract keys
+    try {
+      // Set up sessionless to use our contract keys for this operation
+      const contractSpecificGetKeys = async () => contractKeys;
+      
+      // Temporarily replace the global getKeys function
+      const originalGetKeys = sessionless.getKeys;
+      sessionless.getKeys = contractSpecificGetKeys;
+      
+      console.log(`🔄 Updating BDO ${bdoUuid} with contract data (including SVGs) using pubKey ${contractKeys.pubKey.substring(0, 16)}...`);
+      await bdo.updateBDO(bdoUuid, hash, contract);
+      console.log(`✅ Updated BDO ${bdoUuid} with contract ${contract.uuid} data and SVG representations`);
+      
+      // Restore original getKeys function
+      sessionless.getKeys = originalGetKeys;
+    } catch (updateError) {
+      console.log(`⚠️ Failed to update BDO with contract data: ${updateError.message}`);
+      // Continue anyway - the BDO user exists even if update failed
+    }
+    
+    console.log(`Saved contract ${contract.uuid} to BDO as ${bdoUuid} (public) with pubKey ${contractKeys.pubKey.substring(0, 16)}...`);
     
     // Also save locally as backup
     await saveContract(contract);
@@ -224,16 +374,41 @@ async function loadContractFromBDO(uuid) {
       return localContract; // Return local copy if no BDO info
     }
     
-    // Load from BDO using the stored BDO UUID
-    const hash = uuid;
-    const keys = await getKeys();
-    const bdoResult = await bdo.getBDO(localContract.bdoUuid, hash, keys.pubKey);
+    // Try to get the contract's specific pubKey
+    let contractPubKey;
+    try {
+      contractPubKey = await getContractPubKey(uuid);
+    } catch (error) {
+      console.log(`No pubKey mapping found for contract ${uuid}, using local copy:`, error.message);
+      return localContract;
+    }
     
-    if (bdoResult && bdoResult.bdo) {
-      console.log(`Loaded contract ${uuid} from BDO`);
-      return bdoResult.bdo;
-    } else {
-      console.log(`Failed to load from BDO, using local copy for ${uuid}`);
+    // Load from BDO using the stored BDO UUID and contract-specific pubKey
+    const hash = uuid;
+    try {
+      // Get the contract's keys for BDO authentication
+      const contractKeys = await getKeys(contractPubKey);
+      
+      // Set up sessionless to use the contract's keys for this operation
+      const contractSpecificGetKeys = async () => contractKeys;
+      const originalGetKeys = sessionless.getKeys;
+      sessionless.getKeys = contractSpecificGetKeys;
+      
+      console.log(`🔄 Loading contract ${uuid} from BDO ${localContract.bdoUuid} using pubKey ${contractPubKey.substring(0, 16)}...`);
+      const bdoResult = await bdo.getBDO(localContract.bdoUuid, hash);
+      
+      // Restore original getKeys function
+      sessionless.getKeys = originalGetKeys;
+      
+      if (bdoResult && bdoResult.bdo) {
+        console.log(`✅ Loaded contract ${uuid} from BDO using pubKey ${contractPubKey.substring(0, 16)}...`);
+        return bdoResult.bdo;
+      } else {
+        console.log(`⚠️ BDO returned no data for contract ${uuid}, using local copy`);
+        return localContract;
+      }
+    } catch (bdoError) {
+      console.log(`⚠️ Failed to load contract ${uuid} from BDO: ${bdoError.message}, using local copy`);
       return localContract;
     }
   } catch (error) {
@@ -870,19 +1045,15 @@ app.use((req, res) => {
 const startServer = async () => {
   await ensureDirectories();
   
-  // Initialize server keys for BDO access
-  try {
-    await getKeys();
-    console.log('✅ Server keys initialized for BDO access');
-  } catch (error) {
-    console.error('⚠️  Failed to initialize server keys:', error);
-  }
+  // Load existing contract->pubKey mappings
+  await loadContractPubKeyMappings();
   
   app.listen(PORT, () => {
     console.log(`🪄 Covenant service running on port ${PORT}`);
     console.log(`Environment: ${isDev ? 'development' : 'production'}`);
     console.log(`Data directory: ${dataDir}`);
     console.log(`BDO URL: ${BDO_URL}`);
+    console.log(`✅ Per-contract key management initialized`);
   });
 };
 
