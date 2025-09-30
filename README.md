@@ -54,9 +54,9 @@ All authenticated endpoints require these fields:
 ### Authorization Model
 
 - **Contract Creation**: Any authenticated user
-- **Contract Updates**: Creator or participants only
-- **Step Signing**: Participants only
-- **Contract Deletion**: Creator only
+- **Contract Updates**: Creator or participants only (by public key)
+- **Step Signing**: Participants only (by public key)
+- **Contract Deletion**: Creator only (by public key)
 - **Contract Reading**: No authentication required
 
 ## API Endpoints
@@ -75,7 +75,7 @@ Content-Type: application/json
   "pubKey": "creator-public-key",
   "title": "Freelance Web Development",
   "description": "Contract for building a website",
-  "participants": ["uuid-alice", "uuid-bob"],
+  "participants": ["02a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890", "03b2c3d4e5f6789012345678901234567890123456789012345678901234567890ab"],
   "steps": [
     {
       "description": "Complete project proposal",
@@ -138,7 +138,7 @@ Content-Type: application/json
 #### List Contracts
 ```http
 GET /contracts
-GET /contracts?participant=uuid-alice
+GET /contracts?participant=02a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890
 ```
 
 #### Delete Contract
@@ -186,7 +186,7 @@ GET /health
   "uuid": "contract-uuid",
   "title": "Contract Title",
   "description": "Optional description",
-  "participants": ["uuid-1", "uuid-2"],
+  "participants": ["02a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890", "03b2c3d4e5f6789012345678901234567890123456789012345678901234567890ab"],
   "steps": [
     {
       "id": "step-1",
@@ -194,14 +194,14 @@ GET /health
       "magic_spell": { /* MAGIC spell configuration */ },
       "order": 0,
       "signatures": {
-        "uuid-1": {
+        "02a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890": {
           "signature": "step-signature",
           "timestamp": "1644123456789",
-          "pubKey": "participant-public-key",
+          "pubKey": "02a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890",
           "message": "timestamp+userUUID+contractUUID+stepId",
           "signed_at": "1644123456789"
         },
-        "uuid-2": null // Not yet signed
+        "03b2c3d4e5f6789012345678901234567890123456789012345678901234567890ab": null // Not yet signed
       },
       "completed": false,
       "created_at": "2024-01-01T00:00:00Z",
@@ -212,7 +212,7 @@ GET /health
   "bdo_location": "bdo-storage-uuid",
   "created_at": "1644123456789",
   "updated_at": "1644123456789",
-  "creator": "uuid-creator",
+  "creator": "02a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890",
   "status": "active"
 }
 ```
@@ -234,7 +234,7 @@ client.setUserUUID('your-user-uuid');
 // Create contract (automatically authenticated)
 const contract = await client.createContract({
   title: 'My Contract',
-  participants: ['uuid-1', 'uuid-2', 'your-user-uuid'],
+  participants: ['02a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890', '03b2c3d4e5f6789012345678901234567890123456789012345678901234567890ab', 'your-public-key'],
   steps: [
     { description: 'First step' },
     { description: 'Second step' }
@@ -275,8 +275,8 @@ let client = CovenantClient::new("http://localhost:3011".to_string(), Some(sessi
 // Create contract using builder
 let contract = ContractBuilder::new()
     .title("My Contract")
-    .participant("uuid-1")
-    .participant("uuid-2")
+    .participant("02a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890")
+    .participant("03b2c3d4e5f6789012345678901234567890123456789012345678901234567890ab")
     .step("First step")
     .step("Second step")
     .build()?;

@@ -38,7 +38,7 @@ describe('Covenant JavaScript Client SDK', () => {
       const contractData = {
         title: 'SDK Test Contract',
         description: 'A test contract created via the JavaScript SDK',
-        participants: ['uuid-alice-123', 'uuid-bob-456', testUserUUID],
+        participants: ['02a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890', '03b2c3d4e5f6789012345678901234567890123456789012345678901234567890ab', testKeys.pubKey],
         steps: [
           {
             id: 'step-1',
@@ -75,7 +75,7 @@ describe('Covenant JavaScript Client SDK', () => {
       const contractParams = {
         title: 'Helper Method Contract',
         description: 'Created using the helper method',
-        participants: ['uuid-participant-1', 'uuid-participant-2', testUserUUID],
+        participants: ['02c4d5e6f7890123456789012345678901234567890123456789012345678901234', '03d5e6f7890123456789012345678901234567890123456789012345678901234ab', testKeys.pubKey],
         stepDescriptions: [
           'Step one description',
           'Step two description',
@@ -95,7 +95,7 @@ describe('Covenant JavaScript Client SDK', () => {
       try {
         await client.createContract({
           // Missing title
-          participants: ['uuid-1', 'uuid-2'],
+          participants: ['02e6f7890123456789012345678901234567890123456789012345678901234567', '03f7890123456789012345678901234567890123456789012345678901234567ab'],
           steps: [{ description: 'Test step' }]
         });
         // Should not reach here
@@ -161,14 +161,14 @@ describe('Covenant JavaScript Client SDK', () => {
     });
 
     it('should filter contracts by participant', async () => {
-      const result = await client.listContracts(testUserUUID);
+      const result = await client.listContracts(testKeys.pubKey);
       
       result.should.have.property('success', true);
       result.data.should.be.an('array');
       
-      // All contracts should include our test user
+      // All contracts should include our test user's public key
       result.data.forEach(contract => {
-        contract.participants.should.include(testUserUUID);
+        contract.participants.should.include(testKeys.pubKey);
       });
     });
   });
@@ -182,7 +182,7 @@ describe('Covenant JavaScript Client SDK', () => {
       const contractData = {
         title: 'Signing Test Contract',
         description: 'Contract for testing signature functionality',
-        participants: ['uuid-signer-1', 'uuid-signer-2', testUserUUID],
+        participants: ['02c1d2e3f4567890123456789012345678901234567890123456789012345678901', '03d2e3f4567890123456789012345678901234567890123456789012345678901ab', testKeys.pubKey],
         steps: [
           {
             id: 'signing-step-1',
@@ -277,7 +277,7 @@ describe('Covenant JavaScript Client SDK', () => {
       const contractResult = await client.getContract(createdContractUuid);
       const contract = contractResult.data;
       
-      const signatureStatus = client.getUserSignatureStatus(contract, testUserUUID);
+      const signatureStatus = client.getUserSignatureStatus(contract, testKeys.pubKey);
       
       signatureStatus.should.be.an('array');
       signatureStatus.should.have.length(contract.steps.length);
@@ -322,7 +322,7 @@ describe('Covenant JavaScript Client SDK', () => {
       const contractData = {
         title: 'Contract to Delete',
         description: 'This contract will be deleted in the test',
-        participants: ['uuid-delete-test-1', testUserUUID],
+        participants: ['02f78901234567890123456789012345678901234567890123456789012345678', testKeys.pubKey],
         steps: [
           { 
             id: 'delete-step-1',
@@ -369,7 +369,7 @@ describe('Covenant JavaScript Client SDK', () => {
       try {
         await unauthenticatedClient.createContract({
           title: 'Test',
-          participants: ['uuid-1', 'uuid-2'],
+          participants: ['02890123456789012345678901234567890123456789012345678901234567890', '03901234567890123456789012345678901234567890123456789012345678901ab'],
           steps: [{ description: 'Test step' }]
         });
         // Should not reach here
@@ -386,7 +386,7 @@ describe('Covenant JavaScript Client SDK', () => {
       try {
         await clientWithoutUUID.createContract({
           title: 'Test',
-          participants: ['uuid-1', 'uuid-2'],
+          participants: ['02a12345678901234567890123456789012345678901234567890123456789012', '03b12345678901234567890123456789012345678901234567890123456789012ab'],
           steps: [{ description: 'Test step' }]
         });
         // Should not reach here

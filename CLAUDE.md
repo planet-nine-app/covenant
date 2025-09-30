@@ -50,6 +50,9 @@ Covenant is a Planet Nine allyabase microservice that provides magical contract 
 - `PUT /contract/:uuid/sign` - Sign a contract step
 - `GET /contract/:uuid/svg` - Get beautiful SVG representation
 
+### Public Assets
+- `GET /signCovenant.js` - Interactive contract signing script for web pages
+
 ### Health & Status
 - `GET /health` - Service health check
 
@@ -172,6 +175,8 @@ npm test
 covenant/
 ├── src/server/node/
 │   └── covenant.js          # Main service implementation
+├── public/
+│   └── signCovenant.js      # Public contract signing script
 ├── data/
 │   ├── contracts/           # Local contract storage
 │   └── keys/               # Per-contract key storage
@@ -207,6 +212,38 @@ curl http://localhost:3011/contract/{uuid}/svg?theme=dark
 // Other services can access contract data
 const contractData = await bdo.getBDO(bdoUuid, contractHash);
 const svg = contractData.bdo.svg.light; // Get visual representation
+```
+
+### Public Script Integration
+```html
+<!-- Include covenant signing on any web page -->
+<script src="http://your-covenant-server:3011/signCovenant.js"></script>
+
+<!-- Add covenant spell to any element -->
+<button spell="covenant" 
+        spell-components='{"contractUuid": "contract-uuid", "stepId": "step-uuid"}'>
+  Sign Contract Step
+</button>
+
+<!-- Contract SVG with embedded participant data -->
+<svg data-contract-participants='["pubKey1", "pubKey2"]'>
+  <!-- Contract visualization -->
+</svg>
+```
+
+### Covenant Bridge Interface
+```javascript
+// Provide bridge for cryptographic operations
+window.covenantBridge = {
+  getUserPublicKey: async () => {
+    // Get current user's public key
+    // Return: { success: true, publicKey: "..." } or { success: false, error: "..." }
+  },
+  signContractStep: async (contractUuid, stepId) => {
+    // Sign contract step with user's keys  
+    // Return: { success: true, data: signResult } or { success: false, error: "..." }
+  }
+};
 ```
 
 ### Client Integration
@@ -248,5 +285,89 @@ pub struct CovenantConnection {
 - **Notification System**: Real-time updates via julia messaging
 - **Audit Trail**: Complete history of all contract modifications
 
+## Public Script Features
+
+### 📜 **signCovenant.js Public Script**
+- **Universal Web Integration**: Include on any web page for contract signing functionality
+- **Authorization Management**: Automatically hides buttons for unauthorized users
+- **Participant Validation**: Checks user pubKey against SVG embedded participant data
+- **Cryptographic Bridge**: Supports custom bridge implementations for signing operations
+- **Extension Fallback**: Works with The Advancement browser extension APIs
+- **Event System**: Dispatches `covenantStepSigned` events for application integration
+- **Custom Dialogs**: Covenant-themed dialog system compatible with Tauri environments
+
+### Usage Examples
+```html
+<!-- Basic integration -->
+<script src="http://localhost:3011/signCovenant.js"></script>
+
+<!-- Contract with signing button -->
+<svg data-contract-participants='["pubKey1", "pubKey2"]'>
+  <!-- Contract visualization -->
+  <rect spell="covenant" 
+        spell-components='{"contractUuid": "...", "stepId": "..."}' />
+</svg>
+```
+
+### Bridge Implementation
+```javascript
+// Custom cryptographic bridge
+window.covenantBridge = {
+  getUserPublicKey: async () => ({ success: true, publicKey: userPubKey }),
+  signContractStep: async (contractUuid, stepId) => {
+    // Perform actual signing with user's private keys
+    const result = await covenantAPI.signStep(contractUuid, stepId);
+    return { success: true, data: result };
+  }
+};
+```
+
+### Event Handling
+```javascript
+// Listen for successful signatures
+document.addEventListener('covenantStepSigned', (event) => {
+  const { contractUuid, stepId, stepCompleted } = event.detail;
+  // Update UI, refresh contract display, etc.
+});
+```
+
+## Recent Updates
+
+### 🔑 **Public Key Migration (January 2025)**
+- **Complete UUID → pubKey Migration**: All participant identification now uses secp256k1 public keys instead of UUIDs
+- **Enhanced Security**: Participants identified by cryptographic public keys for stronger authentication
+- **Backward Compatibility**: Tests and documentation updated to reflect pubKey-based architecture
+- **Consistent Authentication**: Aligns participant identification with sessionless authentication model
+
+### 🌐 **Web Integration & Responsive Display**
+- **Responsive SVG Contracts**: Contract SVGs can be embedded on any website with responsive sizing
+- **Viewport Fitting**: CSS patterns for contracts that adapt to browser window size
+- **Dynamic Sizing**: API supports width/height parameters for custom contract dimensions
+- **Cross-Site Integration**: signCovenant.js enables contract signing on any web page
+
+### 📱 **Web Display Examples**
+```css
+/* Responsive container */
+#contract-display {
+  width: 90vw;
+  height: 80vh;
+  margin: 5vh auto;
+  overflow: auto;
+}
+
+#contract-display svg {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+```
+
+```javascript
+// Dynamic sizing
+const viewportWidth = window.innerWidth * 0.9;
+const viewportHeight = window.innerHeight * 0.8;
+fetch(`/contract/${uuid}/svg?width=${viewportWidth}&height=${viewportHeight}`)
+```
+
 ## Last Updated
-January 15, 2025 - Complete implementation with per-contract key management, automatic SVG generation, and full BDO integration.
+January 9, 2025 - Completed public key migration and added responsive web integration patterns for contract display.

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Covenant Extension Integration Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #64b5f6, #81c784);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 16px;
+            color: #b0bec5;
+        }
+
+        .contract-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #64b5f6;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .contract-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #64b5f6;
+            margin-bottom: 10px;
+        }
+
+        .contract-meta {
+            font-size: 14px;
+            color: #b0bec5;
+            margin-bottom: 20px;
+        }
+
+        .contract-description {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            color: #ffffff;
+        }
+
+        .steps-section {
+            margin-bottom: 30px;
+        }
+
+        .steps-header {
+            font-size: 20px;
+            font-weight: bold;
+            color: #81c784;
+            margin-bottom: 20px;
+        }
+
+        .step {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(129, 199, 132, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .step-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .step-status {
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(176, 190, 197, 0.2);
+            color: #b0bec5;
+        }
+
+        .step-status.completed {
+            background: rgba(129, 199, 132, 0.2);
+            color: #81c784;
+        }
+
+        .step-status.signed {
+            background: rgba(255, 183, 77, 0.2);
+            color: #ffb74d;
+        }
+
+        .step-description {
+            font-size: 14px;
+            color: #b0bec5;
+            margin-bottom: 15px;
+        }
+
+        .covenant-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #64b5f6, #667eea);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .covenant-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(100, 181, 246, 0.3);
+        }
+
+        .covenant-button.re-sign {
+            background: linear-gradient(45deg, #ffb74d, #ff8a65);
+        }
+
+        .covenant-button.re-sign:hover {
+            box-shadow: 0 4px 8px rgba(255, 183, 77, 0.3);
+        }
+
+        .extension-status {
+            background: rgba(100, 181, 246, 0.1);
+            border: 1px solid #64b5f6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .extension-status.active {
+            background: rgba(129, 199, 132, 0.1);
+            border-color: #81c784;
+        }
+
+        .extension-status.inactive {
+            background: rgba(244, 67, 54, 0.1);
+            border-color: #f44336;
+        }
+
+        .info-box {
+            background: rgba(255, 183, 77, 0.1);
+            border: 1px solid #ffb74d;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-box h3 {
+            color: #ffb74d;
+            margin-bottom: 10px;
+        }
+
+        .info-box p {
+            color: #b0bec5;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📜 Covenant Extension Integration</h1>
+            <p>Test contract step signing with The Advancement browser extension</p>
+        </div>
+
+        <div class="extension-status" id="extension-status">
+            <h3>🔍 Checking for The Advancement Extension...</h3>
+            <p>Loading extension status...</p>
+        </div>
+
+        <div class="info-box">
+            <h3>🚀 How it Works</h3>
+            <p>
+                This demo shows how The Advancement browser extension can sign covenant contract steps 
+                from any website. The extension users can securely sign contract steps using their 
+                cryptographic identity without needing the full Covenant app.
+            </p>
+        </div>
+
+        <div class="contract-card">
+            <div class="contract-title">Freelance Web Development Contract</div>
+            <div class="contract-meta">
+                Contract UUID: demo-contract-12345678 • Created: Jan 3, 2025 • 2 Participants
+            </div>
+            <div class="contract-description">
+                This is a demo contract for web development services. It includes multiple steps 
+                that require signatures from both the client and the developer to proceed.
+            </div>
+
+            <div class="steps-section">
+                <div class="steps-header">📋 Contract Steps</div>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-title">1. Project Proposal and Scope Agreement</div>
+                        <div class="step-status">⏳ Awaiting signatures</div>
+                    </div>
+                    <div class="step-description">
+                        Both parties review and agree to the project scope, timeline, and deliverables.
+                    </div>
+                    <button 
+                        class="covenant-button" 
+                        spell="covenant" 
+                        spell-components='{"contractUuid":"demo-contract-12345678","stepId":"step-1","action":"signStep"}'>
+                        <span>✍️</span> Sign with Extension
+                    </button>
+                </div>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-title">2. Initial Payment (50%)</div>
+                        <div class="step-status">⏳ Awaiting signatures</div>
+                    </div>
+                    <div class="step-description">
+                        Client releases 50% payment to escrow, developer confirms receipt.
+                    </div>
+                    <button 
+                        class="covenant-button" 
+                        spell="covenant" 
+                        spell-components='{"contractUuid":"demo-contract-12345678","stepId":"step-2","action":"signStep"}'>
+                        <span>✍️</span> Sign with Extension
+                    </button>
+                </div>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-title">3. Development Phase Completion</div>
+                        <div class="step-status">⏳ Awaiting signatures</div>
+                    </div>
+                    <div class="step-description">
+                        Developer delivers completed work, client reviews and approves.
+                    </div>
+                    <button 
+                        class="covenant-button" 
+                        spell="covenant" 
+                        spell-components='{"contractUuid":"demo-contract-12345678","stepId":"step-3","action":"signStep"}'>
+                        <span>✍️</span> Sign with Extension
+                    </button>
+                </div>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-title">4. Final Payment and Project Completion</div>
+                        <div class="step-status">⏳ Awaiting signatures</div>
+                    </div>
+                    <div class="step-description">
+                        Final payment released, all deliverables transferred, contract completed.
+                    </div>
+                    <button 
+                        class="covenant-button" 
+                        spell="covenant" 
+                        spell-components='{"contractUuid":"demo-contract-12345678","stepId":"step-4","action":"signStep"}'>
+                        <span>✍️</span> Sign with Extension
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="contract-card">
+            <div class="contract-title">Product Development Partnership</div>
+            <div class="contract-meta">
+                Contract UUID: demo-contract-87654321 • Created: Jan 3, 2025 • 3 Participants
+            </div>
+            <div class="contract-description">
+                A partnership agreement for developing and launching a new product, involving 
+                multiple stakeholders with different responsibilities.
+            </div>
+
+            <div class="steps-section">
+                <div class="steps-header">📋 Contract Steps</div>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-title">1. Market Research and Analysis</div>
+                        <div class="step-status signed">✍️ You signed</div>
+                    </div>
+                    <div class="step-description">
+                        Complete market research phase with comprehensive analysis document.
+                    </div>
+                    <button 
+                        class="covenant-button re-sign" 
+                        spell="covenant" 
+                        spell-components='{"contractUuid":"demo-contract-87654321","stepId":"step-a","action":"signStep"}'>
+                        <span>🔄</span> Re-sign Step
+                    </button>
+                </div>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-title">2. Product Design and Prototyping</div>
+                        <div class="step-status completed">✅ Completed</div>
+                    </div>
+                    <div class="step-description">
+                        Design phase completed with working prototype delivered and approved.
+                    </div>
+                    <button 
+                        class="covenant-button re-sign" 
+                        spell="covenant" 
+                        spell-components='{"contractUuid":"demo-contract-87654321","stepId":"step-b","action":"signStep"}'>
+                        <span>🔄</span> Re-sign Step
+                    </button>
+                </div>
+
+                <div class="step">
+                    <div class="step-header">
+                        <div class="step-title">3. Development and Testing</div>
+                        <div class="step-status">⏳ Awaiting signatures</div>
+                    </div>
+                    <div class="step-description">
+                        Full development phase with comprehensive testing and quality assurance.
+                    </div>
+                    <button 
+                        class="covenant-button" 
+                        spell="covenant" 
+                        spell-components='{"contractUuid":"demo-contract-87654321","stepId":"step-c","action":"signStep"}'>
+                        <span>✍️</span> Sign with Extension
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check for The Advancement extension
+        function checkExtensionStatus() {
+            const statusEl = document.getElementById('extension-status');
+            
+            if (typeof window.AdvancementExtension !== 'undefined') {
+                statusEl.className = 'extension-status active';
+                statusEl.innerHTML = `
+                    <h3>✅ The Advancement Extension Active</h3>
+                    <p>Version: ${window.AdvancementExtension.version} • Ready for covenant signing</p>
+                `;
+                console.log('✅ The Advancement extension detected');
+            } else if (typeof window.castSpell === 'function') {
+                statusEl.className = 'extension-status active';
+                statusEl.innerHTML = `
+                    <h3>✅ Spell Casting Available</h3>
+                    <p>Covenant spell system ready</p>
+                `;
+                console.log('✅ Spell casting function detected');
+            } else {
+                statusEl.className = 'extension-status inactive';
+                statusEl.innerHTML = `
+                    <h3>❌ The Advancement Extension Not Detected</h3>
+                    <p>Please install and enable The Advancement extension to sign contract steps</p>
+                `;
+                console.log('❌ The Advancement extension not found');
+            }
+        }
+
+        // Listen for covenant step signing events
+        document.addEventListener('covenantStepSigned', (event) => {
+            console.log('📜 Covenant step signed event received:', event.detail);
+            
+            const { contractUuid, stepId, stepCompleted, userUUID } = event.detail;
+            
+            // Update UI to show step was signed
+            const contractElements = document.querySelectorAll(`[spell-components*="${contractUuid}"][spell-components*="${stepId}"]`);
+            contractElements.forEach(element => {
+                const stepDiv = element.closest('.step');
+                if (stepDiv) {
+                    const statusEl = stepDiv.querySelector('.step-status');
+                    const buttonEl = stepDiv.querySelector('.covenant-button');
+                    
+                    if (stepCompleted) {
+                        statusEl.textContent = '✅ Completed';
+                        statusEl.className = 'step-status completed';
+                        buttonEl.innerHTML = '<span>🔄</span> Re-sign Step';
+                        buttonEl.className = 'covenant-button re-sign';
+                    } else {
+                        statusEl.textContent = '✍️ You signed';
+                        statusEl.className = 'step-status signed';
+                        buttonEl.innerHTML = '<span>🔄</span> Re-sign Step';
+                        buttonEl.className = 'covenant-button re-sign';
+                    }
+                }
+            });
+            
+            // Show success notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(45deg, #81c784, #4caf50);
+                color: white;
+                padding: 16px 24px;
+                border-radius: 8px;
+                font-weight: bold;
+                z-index: 10000;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            const statusText = stepCompleted ? 'Step Completed!' : 'Step Signed!';
+            notification.innerHTML = `📜 ${statusText}<br><small>Contract: ${contractUuid.substring(0, 8)}... Step: ${stepId}</small>`;
+            
+            document.body.appendChild(notification);
+            
+            // Remove notification after 4 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 4000);
+        });
+
+        // Add CSS for notification animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Wait for potential extension loading
+        setTimeout(checkExtensionStatus, 1000);
+        
+        // Check periodically in case extension loads later
+        setInterval(checkExtensionStatus, 5000);
+
+        // Manual spell casting for testing (when extension not available)
+        if (typeof window.castSpell === 'undefined') {
+            window.castSpell = function(element) {
+                console.log('🧪 Manual spell casting (extension fallback)');
+                const spell = element.getAttribute('spell');
+                const components = element.getAttribute('spell-components');
+                
+                console.log('Spell:', spell, 'Components:', components);
+                
+                if (spell === 'covenant') {
+                    const data = JSON.parse(components);
+                    alert(`🧪 Test Covenant Signing\n\nContract: ${data.contractUuid}\nStep: ${data.stepId}\n\n(This would normally go through The Advancement extension)`);
+                }
+            };
+        }
+
+        console.log('📜 Covenant Extension Integration Demo loaded');
+    </script>
+</body>
+</html>

@@ -12,6 +12,56 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bdo from 'bdo-js';
 
+// =============================================================================
+// EMOJICODING FUNCTIONS
+// Extracted from The Advancement AdvanceKey emojicoding.js
+// =============================================================================
+
+// Base64 to emoji mapping (64 chars + padding)
+const BASE64_TO_EMOJI = {
+    'A': '😀', 'B': '😃', 'C': '😄', 'D': '😁', 'E': '😆', 'F': '😅', 'G': '😂', 'H': '😊',
+    'I': '😉', 'J': '😍', 'K': '😘', 'L': '😋', 'M': '😎', 'N': '😐', 'O': '😑', 'P': '😔',
+    'Q': '❤️', 'R': '💛', 'S': '💚', 'T': '💙', 'U': '💜', 'V': '💔', 'W': '💕', 'X': '💖',
+    'Y': '👍', 'Z': '👎', 'a': '👌', 'b': '✌️', 'c': '👈', 'd': '👉', 'e': '👆', 'f': '👇',
+    'g': '☀️', 'h': '🌙', 'i': '⭐', 'j': '⚡', 'k': '☁️', 'l': '❄️', 'm': '🔥', 'n': '💧',
+    'o': '🐶', 'p': '🐱', 'q': '🐭', 'r': '🐰', 's': '🐻', 't': '🐯', 'u': '🐸', 'v': '🐧',
+    'w': '💎', 'x': '🔑', 'y': '🎁', 'z': '🎉', '0': '🏠', '1': '🚗', '2': '📱', '3': '⚽',
+    '4': '🍎', '5': '🍊', '6': '🍌', '7': '🍕', '8': '🍔', '9': '🍰', '+': '☕', '/': '🍺',
+    '=': '🌿' // Padding character
+};
+
+/**
+ * Simple hex to emoji encoding using built-in base64
+ * @param {string} hexString - Hex string to encode
+ * @returns {string} Emoji-encoded string with magic delimiters
+ */
+function simpleEncodeHex(hexString) {
+    try {
+        // Convert hex to binary string for btoa
+        const binaryString = hexString.match(/.{2}/g).map(hex =>
+            String.fromCharCode(parseInt(hex, 16))
+        ).join('');
+
+        // Encode to base64
+        const base64 = btoa(binaryString);
+
+        // Convert base64 to emoji
+        const emoji = base64.split('').map(char => BASE64_TO_EMOJI[char] || char).join('');
+
+        // Add magic delimiters
+        const result = '✨' + emoji + '✨';
+
+        return result;
+    } catch (error) {
+        console.error('❌ SIMPLE: Encode error:', error);
+        throw new Error('Simple encode failed: ' + error.message);
+    }
+}
+
+// =============================================================================
+// END EMOJICODING FUNCTIONS
+// =============================================================================
+
 const app = express();
 const PORT = process.env.PORT || 3011;
 const isDev = process.env.DEV === 'true' || process.env.NODE_ENV === 'development';
@@ -35,6 +85,15 @@ app.use(limiter);
 // Setup paths for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, '../../../public'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  }
+}));
 
 // Storage setup
 const dataDir = path.join(__dirname, '../../../data');
@@ -332,7 +391,91 @@ async function saveContractToBDO(contract) {
       console.log(`⚠️ Failed to generate SVG: ${svgError.message}`);
       // Continue without SVG if generation fails
     }
-    
+
+    // Create a separate BDO entry with scgContent for AdvanceKey signing
+    try {
+      console.log(`🪄 Creating BDO entry with scgContent for AdvanceKey signing...`);
+
+      // Generate scgContent containing the covenant signing spell
+      const scgContent = `
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
+  <defs>
+    <linearGradient id="covenantGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6b46c1"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="url(#covenantGrad)" rx="15"/>
+
+  <!-- Title -->
+  <text x="150" y="40" text-anchor="middle" fill="white" font-family="Georgia, serif" font-size="18" font-weight="bold">
+    🔮 Covenant Signing
+  </text>
+
+  <!-- Description -->
+  <text x="150" y="70" text-anchor="middle" fill="#e0e7ff" font-family="Arial" font-size="12">
+    Sign contract step
+  </text>
+
+  <!-- Main signing button -->
+  <rect x="50" y="90" width="200" height="40" rx="20" fill="rgba(255,255,255,0.2)"
+        stroke="white" stroke-width="2"
+        spell="covenant"
+        spell-components='{"contractUuid": "${contract.uuid}", "stepId": "next"}' />
+
+  <text x="150" y="115" text-anchor="middle" fill="white" font-family="Arial" font-size="14" font-weight="bold"
+        spell="covenant"
+        spell-components='{"contractUuid": "${contract.uuid}", "stepId": "next"}'>
+    🪄 Sign Next Step
+  </text>
+
+  <!-- Contract info -->
+  <text x="150" y="150" text-anchor="middle" fill="#c7d2fe" font-family="Arial" font-size="10">
+    ${contract.title}
+  </text>
+
+  <text x="150" y="170" text-anchor="middle" fill="#c7d2fe" font-family="Arial" font-size="10">
+    ${contract.participants.length} participants • ${contract.steps.length} steps
+  </text>
+</svg>
+      `.trim();
+
+      // Create the scgContent BDO entry with the contract's pubKey
+      const scgHash = `scg-${contract.uuid}`;
+      const scgBdoData = {
+        type: 'scgContent',
+        contractUuid: contract.uuid,
+        scgContent: scgContent,
+        createdAt: new Date().toISOString(),
+        description: `Covenant signing spell for contract: ${contract.title}`
+      };
+
+      // Create a separate BDO user for the scgContent using contract keys
+      const contractSpecificGetKeys = async () => contractKeys;
+      const originalGetKeys = sessionless.getKeys;
+      sessionless.getKeys = contractSpecificGetKeys;
+
+      const scgBdoUuid = await bdo.createUser(scgHash, scgBdoData,
+        async (keys) => contractKeys,
+        async () => contractKeys
+      );
+
+      // Restore original getKeys
+      sessionless.getKeys = originalGetKeys;
+
+      console.log(`✅ Created scgContent BDO entry ${scgBdoUuid} for contract ${contract.uuid}`);
+      console.log(`🔮 Emojicode will point to this BDO for AdvanceKey signing`);
+
+      // Store the scgContent BDO UUID in the contract for reference
+      contract.scgBdoUuid = scgBdoUuid;
+
+    } catch (scgError) {
+      console.warn(`⚠️ Failed to create scgContent BDO entry: ${scgError.message}`);
+      // Continue without scgContent if creation fails
+    }
+
     // Update BDO with the contract data (including SVGs) using contract keys
     try {
       // Set up sessionless to use our contract keys for this operation
@@ -488,7 +631,7 @@ app.post('/contract', async (req, res) => {
       createdAt: new Date().getTime() + '',
       updatedAt: new Date().getTime() + '',
       status: 'active',
-      creator: auth.userUUID
+      creator: auth.pubKey
     };
     
     // Validate contract
@@ -571,8 +714,8 @@ app.put('/contract/:uuid', async (req, res) => {
     }
     
     // Verify user is authorized to update this contract (creator or participant)
-    const isAuthorized = contract.creator === auth.userUUID || 
-                         contract.participants.includes(auth.userUUID);
+    const isAuthorized = contract.creator === auth.pubKey || 
+                         contract.participants.includes(auth.pubKey);
     if (!isAuthorized) {
       return res.status(403).json({
         success: false,
@@ -637,7 +780,7 @@ app.put('/contract/:uuid/sign', async (req, res) => {
     }
     
     // Verify participant is part of contract
-    if (!contract.participants.includes(auth.userUUID)) {
+    if (!contract.participants.includes(auth.pubKey)) {
       return res.status(403).json({
         success: false,
         error: 'User not authorized for this contract'
@@ -673,7 +816,7 @@ app.put('/contract/:uuid/sign', async (req, res) => {
     }
     
     // Add signature
-    step.signatures[auth.userUUID] = {
+    step.signatures[auth.pubKey] = {
       signature: stepSignature,
       timestamp: auth.timestamp,
       pubKey: auth.pubKey,
@@ -806,8 +949,22 @@ function generateContractSVG(contract, options = {}) {
   const totalSteps = contract.steps.length;
   const progressPercent = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
   
+  // Extract participant pubKeys from signatures
+  const participantPubKeys = [];
+  contract.steps.forEach(step => {
+    contract.participants.forEach(participantPubKey => {
+      const signature = step.signatures[participantPubKey];
+      if (signature && signature.pubKey) {
+        if (!participantPubKeys.includes(signature.pubKey)) {
+          participantPubKeys.push(signature.pubKey);
+        }
+      }
+    });
+  });
+  
   let svgContent = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"
+         data-contract-participants='${JSON.stringify(participantPubKeys)}'>
       <defs>
         <!-- Parchment texture gradient -->
         <radialGradient id="parchmentGrad" cx="50%" cy="30%" r="70%">
@@ -953,6 +1110,19 @@ function generateContractSVG(contract, options = {}) {
   
   // Footer with creation date and UUID
   const createdDate = new Date(contract.created_at).toLocaleDateString();
+
+  // Generate emojicode for covenant (brand + encoded contract pubKey)
+  let emojicodeText = '';
+  if (contract.pubKey) {
+    try {
+      const encodedPubKey = simpleEncodeHex(contract.pubKey);
+      emojicodeText = `🔮${encodedPubKey}`;
+    } catch (error) {
+      console.warn('⚠️ Failed to encode contract pubKey for emojicode:', error.message);
+      emojicodeText = `🔮${contract.pubKey.substring(0, 8)}...`;
+    }
+  }
+
   svgContent += `
     <g transform="translate(80, ${height-80})">
       <text x="0" y="0" font-family="Arial" font-size="10" fill="${colors.pending}">
@@ -963,6 +1133,20 @@ function generateContractSVG(contract, options = {}) {
       </text>
     </g>
   `;
+
+  // Add emojicode at the bottom for AdvanceKey signing
+  if (emojicodeText) {
+    svgContent += `
+      <g transform="translate(${width/2}, ${height-40})">
+        <rect x="-80" y="-15" width="160" height="25" rx="12" ry="12"
+              fill="${colors.gold}" opacity="0.8" filter="url(#sparkle)"/>
+        <text x="0" y="0" text-anchor="middle" font-family="monospace" font-size="12"
+              fill="white" font-weight="bold">
+          🪄 ${emojicodeText}
+        </text>
+      </g>
+    `;
+  }
   
   svgContent += '</svg>';
   return svgContent;
@@ -986,7 +1170,7 @@ app.delete('/contract/:uuid', async (req, res) => {
     }
     
     // Verify user is authorized to delete this contract (creator only)
-    if (contract.creator !== auth.userUUID) {
+    if (contract.creator !== auth.pubKey) {
       return res.status(403).json({
         success: false,
         error: 'Only the contract creator can delete this contract'

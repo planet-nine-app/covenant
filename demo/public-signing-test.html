@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Covenant Public Signing Script Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 40px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 24px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 8px;
+        }
+        
+        .status-loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .test-section {
+            margin: 24px 0;
+            padding: 20px;
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .contract-display {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .info-panel {
+            background: #e8f4f8;
+            border-left: 4px solid #17a2b8;
+            padding: 16px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📜 Covenant Public Signing Script Test</h1>
+            <p>Testing signCovenant.js served from covenant/public/ directory</p>
+            
+            <div id="script-status">
+                <span class="status-indicator status-loading">📡 Loading signCovenant.js...</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Test 1: Script Loading</h2>
+            <p>Verifying that signCovenant.js loads correctly from the public endpoint.</p>
+            <div id="loading-test-result">
+                <em>Testing script load...</em>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔑 Test 2: Public Key Access</h2>
+            <p>Testing if the script can access user public keys via bridge or extension.</p>
+            <button class="button" onclick="testPublicKeyAccess()">🔍 Test Public Key Access</button>
+            <div id="pubkey-test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 Test 3: Contract with Embedded PubKeys</h2>
+            <p>Sample contract SVG with embedded participant data for authorization testing.</p>
+            
+            <div class="contract-display">
+                <!-- Sample SVG with embedded participant data -->
+                <svg width="400" height="200" xmlns="http://www.w3.org/2000/svg"
+                     data-contract-participants='["03f1a9c2b4e6d8a7e3f5b2c8d9a1f4e7b6c3d0a9f2e5b8c1", "0287a4b1c5e8d2a6f9c3e7b4d1a8f5e2b9c6a3f0d7b4a1e8"]'
+                     viewBox="0 0 400 200">
+                    
+                    <!-- Parchment background -->
+                    <rect width="400" height="200" fill="#faf7f0" stroke="#8b7355" stroke-width="2" rx="8"/>
+                    
+                    <!-- Title -->
+                    <text x="200" y="40" text-anchor="middle" font-family="serif" font-size="18" font-weight="bold" fill="#2c1810">
+                        🏰 Test Magical Contract
+                    </text>
+                    
+                    <!-- Contract details -->
+                    <text x="200" y="70" text-anchor="middle" font-family="serif" font-size="14" fill="#4a3728">
+                        Participants: 2 | Steps: 2
+                    </text>
+                    
+                    <!-- Step 1 -->
+                    <rect x="50" y="100" width="120" height="40" fill="#e8f5e8" stroke="#4caf50" stroke-width="2" rx="4"/>
+                    <text x="110" y="125" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#2e7d32">
+                        ✅ Step 1: Agreed
+                    </text>
+                    
+                    <!-- Step 2 with covenant spell -->
+                    <rect x="230" y="100" width="120" height="40" fill="#fff3e0" stroke="#ff9800" stroke-width="2" rx="4" 
+                          spell="covenant" 
+                          spell-components='{"contractUuid": "144f602d-75ab-473c-9c55-b29bf2defee0", "stepId": "132df700-fdbf-4ac9-85f5-649c0326e550", "action": "signStep"}'
+                          style="cursor: pointer;">
+                        <title>Click to sign this contract step</title>
+                    </rect>
+                    <text x="290" y="125" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#e65100" style="pointer-events: none;">
+                        📝 Step 2: Sign Here
+                    </text>
+                </svg>
+            </div>
+            
+            <div class="info-panel">
+                <strong>📜 Contract Details:</strong><br>
+                • Contract UUID: 144f602d-75ab-473c-9c55-b29bf2defee0<br>
+                • Step ID: 132df700-fdbf-4ac9-85f5-649c0326e550<br>
+                • Embedded Participants: 2 public keys in data-contract-participants<br>
+                • Authorization: Only participants can see/click the orange "Sign Here" button
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Test 4: Authorization Behavior</h2>
+            <p>Testing the automatic hiding of unauthorized covenant buttons.</p>
+            <button class="button" onclick="testAuthorization()">🔐 Test Authorization System</button>
+            <div id="auth-test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🪄 Test 5: Manual Debug Functions</h2>
+            <p>Testing the exposed debug functions in window.covenantDebug.</p>
+            <button class="button" onclick="testDebugFunctions()">🔍 Test Debug Functions</button>
+            <div id="debug-test-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock covenant bridge for testing
+        window.covenantBridge = {
+            getUserPublicKey: async () => {
+                console.log('🌉 Mock covenant bridge: getUserPublicKey called');
+                // Return one of the embedded pubKeys to test authorization
+                return {
+                    success: true,
+                    publicKey: '03f1a9c2b4e6d8a7e3f5b2c8d9a1f4e7b6c3d0a9f2e5b8c1'
+                };
+            },
+            signContractStep: async (contractUuid, stepId) => {
+                console.log('🌉 Mock covenant bridge: signContractStep called');
+                console.log(`   Contract: ${contractUuid}`);
+                console.log(`   Step: ${stepId}`);
+                
+                // Simulate successful signing
+                return {
+                    success: true,
+                    data: {
+                        contractUuid: contractUuid,
+                        stepId: stepId,
+                        stepCompleted: true,
+                        signature: 'mock-signature-' + Date.now()
+                    }
+                };
+            }
+        };
+
+        // Test functions
+        async function testPublicKeyAccess() {
+            const resultDiv = document.getElementById('pubkey-test-result');
+            resultDiv.innerHTML = '<em>Testing public key access...</em>';
+            
+            try {
+                if (window.covenantDebug && window.covenantDebug.getUserPublicKey) {
+                    const pubKey = await window.covenantDebug.getUserPublicKey();
+                    if (pubKey) {
+                        resultDiv.innerHTML = `
+                            <div class="status-indicator status-success">✅ Public Key Retrieved</div>
+                            <div class="info-panel">
+                                <strong>🔑 Retrieved PubKey:</strong><br>
+                                ${pubKey.substring(0, 40)}...<br><br>
+                                <strong>🎯 Bridge Status:</strong> Mock bridge working correctly
+                            </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = '<div class="status-indicator status-error">❌ No public key available</div>';
+                    }
+                } else {
+                    resultDiv.innerHTML = '<div class="status-indicator status-error">❌ covenantDebug.getUserPublicKey not available</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status-indicator status-error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function testAuthorization() {
+            const resultDiv = document.getElementById('auth-test-result');
+            resultDiv.innerHTML = '<em>Testing authorization system...</em>';
+            
+            try {
+                if (window.covenantDebug) {
+                    const pubKey = await window.covenantDebug.getUserPublicKey();
+                    const isAuthorized = await window.covenantDebug.checkAuthorization(
+                        '144f602d-75ab-473c-9c55-b29bf2defee0', 
+                        pubKey
+                    );
+                    
+                    resultDiv.innerHTML = `
+                        <div class="status-indicator ${isAuthorized ? 'status-success' : 'status-error'}">
+                            ${isAuthorized ? '✅ User Authorized' : '❌ User Not Authorized'}
+                        </div>
+                        <div class="info-panel">
+                            <strong>🔍 Authorization Check:</strong><br>
+                            User PubKey: ${pubKey ? pubKey.substring(0, 40) + '...' : 'None'}<br>
+                            Contract: 144f602d-75ab-473c-9c55-b29bf2defee0<br>
+                            Authorized: ${isAuthorized ? 'Yes - can sign steps' : 'No - buttons will be hidden'}
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div class="status-indicator status-error">❌ covenantDebug not available</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status-indicator status-error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function testDebugFunctions() {
+            const resultDiv = document.getElementById('debug-test-result');
+            
+            if (window.covenantDebug) {
+                // Test debug functions
+                window.covenantDebug.logStatus();
+                
+                const debugMethods = Object.keys(window.covenantDebug);
+                resultDiv.innerHTML = `
+                    <div class="status-indicator status-success">✅ Debug Functions Available</div>
+                    <div class="info-panel">
+                        <strong>🔧 Available Debug Methods:</strong><br>
+                        ${debugMethods.map(method => `• ${method}`).join('<br>')}<br><br>
+                        <strong>📊 Current Status:</strong><br>
+                        Check browser console for detailed status report.
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = '<div class="status-indicator status-error">❌ window.covenantDebug not available</div>';
+            }
+        }
+
+        // Listen for covenant events
+        document.addEventListener('covenantStepSigned', (event) => {
+            console.log('📜 Covenant step signed event received:', event.detail);
+            
+            const eventInfo = document.createElement('div');
+            eventInfo.className = 'info-panel';
+            eventInfo.innerHTML = `
+                <strong>✅ Covenant Step Signed Event:</strong><br>
+                Contract: ${event.detail.contractUuid}<br>
+                Step: ${event.detail.stepId}<br>
+                Step Completed: ${event.detail.stepCompleted ? 'Yes' : 'No'}<br>
+                Timestamp: ${new Date(event.detail.timestamp).toLocaleString()}
+            `;
+            
+            document.querySelector('.container').appendChild(eventInfo);
+        });
+
+        // Script load detection
+        function checkScriptLoaded() {
+            const statusDiv = document.getElementById('script-status');
+            const resultDiv = document.getElementById('loading-test-result');
+            
+            if (window.signCovenant && window.applyCovenantHandlers && window.covenantDebug) {
+                statusDiv.innerHTML = '<span class="status-indicator status-success">✅ signCovenant.js loaded successfully</span>';
+                resultDiv.innerHTML = `
+                    <div class="status-indicator status-success">✅ Script Loaded Successfully</div>
+                    <div class="info-panel">
+                        <strong>🎯 Available Functions:</strong><br>
+                        • window.signCovenant - Main signing function<br>
+                        • window.applyCovenantHandlers - Handler application<br>
+                        • window.covenantDebug - Debug utilities<br><br>
+                        <strong>📜 Initialization:</strong> Automatic covenant element detection active
+                    </div>
+                `;
+            } else {
+                statusDiv.innerHTML = '<span class="status-indicator status-error">❌ signCovenant.js failed to load</span>';
+                resultDiv.innerHTML = `
+                    <div class="status-indicator status-error">❌ Script Load Failed</div>
+                    <div class="info-panel">
+                        Make sure covenant service is running on port 3011 and serving static files.
+                    </div>
+                `;
+            }
+        }
+
+        // Check script loading after a brief delay
+        setTimeout(checkScriptLoaded, 1000);
+    </script>
+
+    <!-- Include the public signCovenant script from covenant service -->
+    <script src="http://localhost:3011/signCovenant.js"></script>
+</body>
+</html>

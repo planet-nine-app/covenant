@@ -52,8 +52,8 @@ describe('Covenant Service', () => {
   let keysToReturn = {};
   
   const testParticipants = [
-    'uuid-alice-123456789',
-    'uuid-bob-987654321'
+    '02a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890',
+    '03b2c3d4e5f6789012345678901234567890123456789012345678901234567890ab'
   ];
   
   const testSteps = [
@@ -99,7 +99,7 @@ describe('Covenant Service', () => {
     testContract = {
       title: 'Test Magical Contract',
       description: 'A test contract for automated testing',
-      participants: [...testParticipants, testUserUUID], // Include current test user as participant
+      participants: [...testParticipants, testKeys.pubKey], // Include current test user as participant
       steps: testSteps,
       productUuid: 'test-product-uuid-123'
     };
@@ -130,7 +130,7 @@ describe('Covenant Service', () => {
       const contract = response.body.data;
       contract.should.have.property('uuid');
       contract.should.have.property('title', testContract.title);
-      contract.participants.should.deep.equal([...testParticipants, testUserUUID]);
+      contract.participants.should.deep.equal([...testParticipants, testKeys.pubKey]);
       contract.steps.should.have.length(testSteps.length);
       contract.should.have.property('status', 'active');
       contract.should.have.property('created_at');
@@ -145,7 +145,7 @@ describe('Covenant Service', () => {
         step.should.have.property('signatures');
         
         // Check signatures initialized for all participants
-        [...testParticipants, testUserUUID].forEach(participant => {
+        [...testParticipants, testKeys.pubKey].forEach(participant => {
           step.signatures.should.have.property(participant, null);
         });
       });
@@ -274,7 +274,7 @@ describe('Covenant Service', () => {
       // Update testContract to use the new testUserUUID
       testContract = {
         ...testContract,
-        participants: [...testParticipants, testUserUUID]
+        participants: [...testParticipants, testKeys.pubKey]
       };
       
       const authPayload = await createAuthPayload(null, testContract);
@@ -386,7 +386,7 @@ describe('Covenant Service', () => {
         const contract = {
           ...testContract,
           title: `Test Contract ${i + 1}`,
-          participants: i % 2 === 0 ? [...testParticipants, testUserUUID] : ['other-participant-1', 'other-participant-2', testUserUUID]
+          participants: i % 2 === 0 ? [...testParticipants, testKeys.pubKey] : ['02d4e5f6789012345678901234567890123456789012345678901234567890123456', '03e5f6789012345678901234567890123456789012345678901234567890123456ab', testKeys.pubKey]
         };
 
         const authPayload = await createAuthPayload(null, contract);
@@ -416,15 +416,15 @@ describe('Covenant Service', () => {
     });
 
     it('should filter contracts by participant', async () => {
-      const response = await get(`${baseURL}contracts?participant=${testUserUUID}`);
+      const response = await get(`${baseURL}contracts?participant=${testKeys.pubKey}`);
 
       response.status.should.equal(200);
       response.body.should.have.property('success', true);
       response.body.data.should.be.an('array');
       
-      // Should only return contracts where testUserUUID is involved
+      // Should only return contracts where test user's pubKey is involved
       response.body.data.forEach(contract => {
-        contract.participants.should.include(testUserUUID);
+        contract.participants.should.include(testKeys.pubKey);
       });
     });
   });

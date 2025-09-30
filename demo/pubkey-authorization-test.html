@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PubKey Authorization Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #64b5f6, #81c784);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 16px;
+            color: #b0bec5;
+        }
+
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #64b5f6;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .test-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #64b5f6;
+            margin-bottom: 15px;
+        }
+
+        .covenant-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #64b5f6, #667eea);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            margin: 10px 10px 10px 0;
+        }
+
+        .covenant-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(100, 181, 246, 0.3);
+        }
+
+        .contract-svg {
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: white;
+            margin: 20px 0;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .debug-output {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .debug-line {
+            margin: 2px 0;
+        }
+
+        .debug-line.error {
+            color: #ff6b6b;
+        }
+
+        .debug-line.success {
+            color: #51cf66;
+        }
+
+        .debug-line.info {
+            color: #74c0fc;
+        }
+
+        .debug-line.warning {
+            color: #ffb74d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 PubKey Authorization Test</h1>
+            <p>Testing extension-based authorization using participant public keys embedded in contract SVGs</p>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">📋 Test Contract: SVG Test Contract</div>
+            <p><strong>Contract UUID:</strong> 144f602d-75ab-473c-9c55-b29bf2defee0</p>
+            <p><strong>Participants:</strong> ebd8af77-52f1-408f-a502-b6d1e09427e0, 5c174b4b-f6cc-45d0-8c5f-49fe57a8fecb</p>
+            
+            <!-- These buttons should be hidden if user is not authorized -->
+            <div style="margin: 20px 0;">
+                <button 
+                    class="covenant-button" 
+                    spell="covenant" 
+                    spell-components='{"contractUuid":"144f602d-75ab-473c-9c55-b29bf2defee0","stepId":"132df700-fdbf-4ac9-85f5-649c0326e550","action":"signStep"}'>
+                    <span>✍️</span> Sign Step 1 (Should be hidden if not participant)
+                </button>
+                
+                <button 
+                    class="covenant-button" 
+                    spell="covenant" 
+                    spell-components='{"contractUuid":"144f602d-75ab-473c-9c55-b29bf2defee0","stepId":"7fc354f2-96a2-4751-b941-1f9cb5143c1c","action":"signStep"}'>
+                    <span>✍️</span> Sign Step 2 (Should be hidden if not participant)
+                </button>
+            </div>
+            
+            <!-- Display the contract SVG with embedded pubKeys -->
+            <iframe id="contract-svg" 
+                    class="contract-svg"
+                    width="800" 
+                    height="600"
+                    src="http://localhost:3011/contract/144f602d-75ab-473c-9c55-b29bf2defee0/svg">
+            </iframe>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">🧪 Manual Test Controls</div>
+            <button onclick="checkUserPubKey()">🔍 Get My PubKey</button>
+            <button onclick="checkSVGParticipants()">📜 Extract SVG Participants</button>
+            <button onclick="reloadSVG()">🔄 Reload Contract SVG</button>
+            <button onclick="testAuthorization()">🔐 Test Authorization</button>
+        </div>
+
+        <div class="debug-output" id="debug-output">
+            <div class="debug-line info">🔧 Debug Output - PubKey Authorization Test</div>
+        </div>
+    </div>
+
+    <script>
+        let debugOutput = document.getElementById('debug-output');
+        
+        function addDebugLine(message, type = 'info') {
+            const line = document.createElement('div');
+            line.className = `debug-line ${type}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            debugOutput.appendChild(line);
+            debugOutput.scrollTop = debugOutput.scrollHeight;
+        }
+
+        // Manual test functions
+        async function checkUserPubKey() {
+            addDebugLine('🔍 Checking user public key...', 'info');
+            
+            if (window.AdvancementExtension && window.AdvancementExtension.sessionless) {
+                try {
+                    const address = await window.AdvancementExtension.sessionless.getAddress();
+                    addDebugLine(`✅ User pubKey: ${address.address}`, 'success');
+                } catch (error) {
+                    addDebugLine(`❌ Failed to get pubKey: ${error.message}`, 'error');
+                }
+            } else {
+                addDebugLine('❌ No Advancement Extension or sessionless API available', 'warning');
+            }
+        }
+
+        async function checkSVGParticipants() {
+            addDebugLine('📜 Checking SVG for participant pubKeys...', 'info');
+            
+            const svgElements = document.querySelectorAll('svg[data-contract-participants]');
+            addDebugLine(`Found ${svgElements.length} SVGs with participant data`, 'info');
+            
+            svgElements.forEach((svg, index) => {
+                const participantsData = svg.getAttribute('data-contract-participants');
+                try {
+                    const participants = JSON.parse(participantsData);
+                    addDebugLine(`SVG ${index + 1}: ${participants.length} participant pubKeys`, 'success');
+                    participants.forEach((pubKey, i) => {
+                        addDebugLine(`  Participant ${i + 1}: ${pubKey.substring(0, 20)}...`, 'info');
+                    });
+                } catch (error) {
+                    addDebugLine(`❌ Error parsing SVG ${index + 1} participant data: ${error.message}`, 'error');
+                }
+            });
+            
+            if (svgElements.length === 0) {
+                addDebugLine('⚠️ No SVG elements with data-contract-participants found', 'warning');
+                addDebugLine('💡 This means no participant signatures exist yet', 'info');
+            }
+        }
+
+        function reloadSVG() {
+            addDebugLine('🔄 Reloading contract SVG...', 'info');
+            const iframe = document.getElementById('contract-svg');
+            iframe.src = iframe.src + '&reload=' + Date.now();
+            
+            // Wait a moment then check for SVG changes
+            setTimeout(() => {
+                checkSVGParticipants();
+            }, 2000);
+        }
+
+        async function testAuthorization() {
+            addDebugLine('🔐 Testing complete authorization flow...', 'info');
+            
+            // Check user pubKey
+            await checkUserPubKey();
+            
+            // Check SVG participants  
+            await checkSVGParticipants();
+            
+            // Check covenant buttons
+            const covenantButtons = document.querySelectorAll('[spell="covenant"]');
+            addDebugLine(`📋 Found ${covenantButtons.length} covenant buttons on page`, 'info');
+            
+            covenantButtons.forEach((button, index) => {
+                const display = window.getComputedStyle(button).display;
+                const isVisible = display !== 'none';
+                addDebugLine(`Button ${index + 1}: ${isVisible ? 'VISIBLE' : 'HIDDEN'}`, isVisible ? 'success' : 'warning');
+            });
+        }
+
+        // Listen for covenant step signing events
+        document.addEventListener('covenantStepSigned', (event) => {
+            addDebugLine(`📜 Covenant step signed: ${JSON.stringify(event.detail)}`, 'success');
+            
+            // Reload SVG to check for updated participant data
+            setTimeout(() => {
+                addDebugLine('🔄 Reloading SVG to check for updated participant data...', 'info');
+                reloadSVG();
+            }, 1000);
+        });
+
+        // Initialize  
+        addDebugLine('📜 PubKey Authorization Test loaded', 'info');
+        addDebugLine('🔧 Contract SVG should be loading from: http://localhost:3011/contract/144f602d-75ab-473c-9c55-b29bf2defee0/svg', 'info');
+        addDebugLine('💡 Initially, buttons should be hidden because no participant signatures exist yet', 'info');
+        
+        // Wait for page to load then run initial authorization test
+        setTimeout(() => {
+            testAuthorization();
+        }, 2000);
+    </script>
+</body>
+</html>
