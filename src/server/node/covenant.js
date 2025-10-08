@@ -734,7 +734,18 @@ app.post('/contract', async (req, res) => {
     
     // Save contract to BDO (with local backup)
     await saveContractToBDO(contract);
-    
+    // Add bdoPubKey and emojicode
+    contract.bdoPubKey = contract.pubKey;
+    if (contract.pubKey) {
+      try {
+        const encodedPubKey = simpleEncodeHex(contract.pubKey);
+        contract.emojicode = `✨${encodedPubKey}✨`;
+      } catch (error) {
+        console.warn("⚠️ Failed to encode pubKey:", error.message);
+      }
+    }
+
+
     console.log(`Created contract: ${contract.uuid} - "${contract.title}" (saved to BDO)`);
     
     res.json({
@@ -1045,7 +1056,7 @@ function generateContractSVG(contract, options = {}) {
   });
   
   let svgContent = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg"
+    <svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg"
          data-contract-participants='${JSON.stringify(participantPubKeys)}'>
       <defs>
         <!-- Parchment texture gradient -->
@@ -1229,7 +1240,28 @@ function generateContractSVG(contract, options = {}) {
       </g>
     `;
   }
-  
+
+
+  // Add SIGN button (hidden by default, shown when authorized via JavaScript)
+  svgContent += `
+  <!-- SIGN Button (hidden by default, shown when authorized) -->
+  <g id="sign-button-group" class="sign-button" style="display: none;">
+    <rect spell="sign" spell-components="{\"contractUuid\":\"${contract.uuid}\"}"
+          x="${width/2 - 100}" y="${height - 100}"
+          width="200" height="40"
+          rx="20" ry="20"
+          fill="${colors.signature}"
+          stroke="${colors.gold}" stroke-width="2"
+          cursor="pointer" filter="url(#signatureGlow)"/>
+    <text spell="sign" spell-components="{\"contractUuid\":\"${contract.uuid}\"}"
+          x="${width/2}" y="${height - 73}"
+          text-anchor="middle"
+          font-family="Arial" font-size="18" font-weight="bold"
+          fill="white" cursor="pointer" pointer-events="none">
+      ✍️ SIGN CONTRACT
+    </text>
+  </g>
+  `;
   svgContent += '</svg>';
   return svgContent;
 }
