@@ -11,6 +11,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bdo from 'bdo-js';
+import MAGIC from './src/magic/magic.js';
 
 // =============================================================================
 // EMOJICODING FUNCTIONS
@@ -562,6 +563,94 @@ async function loadContractFromBDO(uuid) {
 }
 
 // Routes
+
+// Create Covenant user
+app.put('/user/create', async (req, res) => {
+  try {
+    const { pubKey, timestamp, signature } = req.body;
+    const message = timestamp + pubKey;
+
+    // Verify sessionless authentication
+    if (!signature || !sessionless.verifySignature(signature, message, pubKey)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Authentication failed'
+      });
+    }
+
+    // Generate UUID for this user
+    const userUUID = sessionless.generateUUID();
+
+    // Create user object
+    const user = {
+      uuid: userUUID,
+      pubKey: pubKey,
+      createdAt: new Date().getTime().toString(),
+      updatedAt: new Date().getTime().toString()
+    };
+
+    // Save user to local storage
+    const usersDir = path.join(dataDir, 'users');
+    await fs.mkdir(usersDir, { recursive: true });
+    const userPath = path.join(usersDir, `${userUUID}.json`);
+    await fs.writeFile(userPath, JSON.stringify(user, null, 2));
+
+    console.log(`✅ Created Covenant user: ${userUUID} with pubKey ${pubKey.substring(0, 16)}...`);
+
+    res.json({
+      success: true,
+      user: user
+    });
+  } catch (error) {
+    console.error('Failed to create user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create user'
+    });
+  }
+});
+
+// Get user by UUID
+app.get('/user/:uuid', async (req, res) => {
+  try {
+    const { uuid } = req.params;
+    const { timestamp, signature } = req.query;
+
+    // Load user
+    const usersDir = path.join(dataDir, 'users');
+    const userPath = path.join(usersDir, `${uuid}.json`);
+
+    try {
+      const userData = await fs.readFile(userPath, 'utf-8');
+      const user = JSON.parse(userData);
+
+      // Verify authentication
+      const message = timestamp + uuid;
+      if (!signature || !sessionless.verifySignature(signature, message, user.pubKey)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Authentication failed'
+        });
+      }
+
+      res.json({
+        success: true,
+        user: user
+      });
+    } catch (readError) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+  } catch (error) {
+    console.error('Failed to get user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user'
+    });
+  }
+});
 
 // Health check
 app.get('/health', (req, res) => {
@@ -1205,6 +1294,27 @@ app.delete('/contract/:uuid', async (req, res) => {
       success: false,
       error: 'Failed to delete contract'
     });
+  }
+});
+
+// MAGIC spell endpoint
+app.post('/magic/spell/:spellName', async (req, res) => {
+  try {
+    const spellName = req.params.spellName;
+    const spell = req.body;
+
+    if (!MAGIC[spellName]) {
+      res.status(404);
+      return res.send({ error: 'spell not found' });
+    }
+
+    const spellResp = await MAGIC[spellName](spell);
+    res.status(spellResp.success ? 200 : 900);
+    return res.send(spellResp);
+  } catch (err) {
+    console.error('MAGIC spell error:', err);
+    res.status(500);
+    res.send({ error: 'spell execution failed' });
   }
 });
 
