@@ -377,17 +377,10 @@ async function saveContractToBDO(contract) {
     // Generate beautiful SVG representation for cross-service access
     console.log(`🎨 Generating SVG representation for contract ${contract.uuid}...`);
     try {
-      const lightSvg = generateContractSVG(contract, { theme: 'light', width: 800, height: 600 });
-      const darkSvg = generateContractSVG(contract, { theme: 'dark', width: 800, height: 600 });
-      
-      // Add SVG representations to contract data
-      contract.svg = {
-        light: lightSvg,
-        dark: darkSvg,
-        generated_at: new Date().toISOString()
-      };
-      
-      console.log(`✅ Generated light and dark theme SVGs for contract ${contract.uuid}`);
+      const svg = generateContractSVG(contract, { theme: 'dark', width: 800, height: 600 });
+      contract.svgContent = svg;
+      // Continue without SVG if generation fails
+      console.log(`✅ Generated SVG for contract ${contract.uuid}`);
     } catch (svgError) {
       console.log(`⚠️ Failed to generate SVG: ${svgError.message}`);
       // Continue without SVG if generation fails
