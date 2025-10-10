@@ -133,8 +133,8 @@ describe('Covenant Service', () => {
       contract.participants.should.deep.equal([...testParticipants, testKeys.pubKey]);
       contract.steps.should.have.length(testSteps.length);
       contract.should.have.property('status', 'active');
-      contract.should.have.property('created_at');
-      contract.should.have.property('updated_at');
+      contract.should.have.property('createdAt');
+      contract.should.have.property('updatedAt');
 
       // Check step structure
       contract.steps.forEach((step, index) => {
@@ -242,7 +242,7 @@ describe('Covenant Service', () => {
       response.status.should.equal(200);
       response.body.should.have.property('success', true);
       response.body.data.should.have.property('title', updatedTitle);
-      response.body.data.should.have.property('updated_at');
+      response.body.data.should.have.property('updatedAt');
     });
 
     it('should return 404 for updating non-existent contract', async () => {
@@ -411,8 +411,8 @@ describe('Covenant Service', () => {
       contract.should.have.property('uuid');
       contract.should.have.property('title');
       contract.should.have.property('participants');
-      contract.should.have.property('step_count');
-      contract.should.have.property('completed_steps');
+      contract.should.have.property('stepCount');
+      contract.should.have.property('completedSteps');
     });
 
     it('should filter contracts by participant', async () => {
@@ -465,11 +465,11 @@ describe('Covenant Service', () => {
 
       response.status.should.equal(200);
       response.headers['content-type'].should.include('image/svg+xml');
-      
+
       // Convert Uint8Array body to string
       const svgContent = response.text || (response.body ? Buffer.from(response.body).toString() : '');
-      svgContent.should.include('width="1000"');
-      svgContent.should.include('height="800"');
+      // SVG uses viewBox for dimensions
+      svgContent.should.include('viewBox="0 0 1000 800"');
     });
 
     it('should return 404 for SVG of non-existent contract', async () => {

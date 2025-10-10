@@ -24,13 +24,15 @@ const MAGIC = {
         studentPubKey,
         lessonBdoPubKey,
         lessonTitle,
-        price
+        price,
+        studentUUID,
+        contractSignature
       } = spell.components;
 
-      if (!teacherPubKey || !studentPubKey || !lessonBdoPubKey) {
+      if (!teacherPubKey || !studentPubKey || !lessonBdoPubKey || !studentUUID || !contractSignature) {
         return {
           success: false,
-          error: 'Missing required spell components: teacherPubKey, studentPubKey, lessonBdoPubKey'
+          error: 'Missing required spell components: teacherPubKey, studentPubKey, lessonBdoPubKey, studentUUID, contractSignature'
         };
       }
 
@@ -59,12 +61,18 @@ const MAGIC = {
         product_uuid: lessonBdoPubKey,
         bdo_location: lessonBdoPubKey,
 
-        // Sessionless auth - using the caster's signature from the spell
-        signature: spell.casterSignature,
+        // Sessionless auth - using the pre-signed contract signature from spell components
+        signature: contractSignature,
         timestamp: spell.timestamp,
-        userUUID: spell.casterUUID,
+        userUUID: studentUUID,
         pubKey: studentPubKey // Student is creating the contract
       };
+
+      // Debug logging
+      console.log(`\n🔍 Contract creation debug:`);
+      console.log(`Message for verification: "${spell.timestamp}${studentUUID}"`);
+      console.log(`Signature: ${contractSignature}`);
+      console.log(`PubKey: ${studentPubKey}`);
 
       // Call Covenant's POST /contract endpoint
       const response = await fetch(`${COVENANT_URL}contract`, {

@@ -239,8 +239,8 @@ describe('Covenant JavaScript Client SDK', () => {
       
       svg.should.be.a('string');
       svg.should.include('<svg');
-      svg.should.include('width="1000"');
-      svg.should.include('height="800"');
+      // SVG uses viewBox for dimensions
+      svg.should.include('viewBox="0 0 1000 800"');
     });
 
     it('should handle SVG generation for non-existent contract', async () => {

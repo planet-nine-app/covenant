@@ -50,6 +50,9 @@ Covenant is a Planet Nine allyabase microservice that provides magical contract 
 - `PUT /contract/:uuid/sign` - Sign a contract step
 - `GET /contract/:uuid/svg` - Get beautiful SVG representation
 
+### MAGIC Protocol
+- `POST /magic/spell/:spellName` - Execute MAGIC spells for contract operations
+
 ### Public Assets
 - `GET /signCovenant.js` - Interactive contract signing script for web pages
 
@@ -272,12 +275,56 @@ pub struct CovenantConnection {
 - **Public Reading**: Contract data readable by anyone with UUID
 - **BDO Privacy**: Distributed storage uses contract-specific authentication
 
+## MAGIC Protocol Integration
+
+### Available Spells
+
+#### `purchaseLesson`
+Creates a SODOTO contract for a lesson purchase transaction.
+
+**Spell Components**:
+- `teacherPubKey` - Teacher's public key (participant 1)
+- `studentPubKey` - Student's public key (participant 2)
+- `lessonBdoPubKey` - BDO UUID of the lesson being purchased
+- `lessonTitle` - Title of the lesson (optional)
+- `price` - Price in cents (optional)
+- `studentUUID` - Student's UUID for authentication
+- `contractSignature` - Pre-signed signature for contract creation
+
+**Contract Steps Created**:
+1. Payment Completed
+2. Grant Lesson Access
+3. Complete Lesson
+4. Verify Completion
+5. Grant Nineum Permission
+
+**Returns**:
+```javascript
+{
+  success: true,
+  contractUuid: "contract-uuid",
+  contract: { /* full contract object */ }
+}
+```
+
+**Important Notes**:
+- The spell caster must pre-sign the contract creation signature using: `timestamp + studentUUID`
+- The contract is created with the student as the creator (using studentPubKey)
+- Contract is automatically saved to BDO with per-contract authentication
+- SVG visualizations are generated automatically
+
+### Implementation Details
+
+The MAGIC endpoint (`/magic/spell/:spellName`) allows other services to trigger contract creation through the spell protocol. Since spell resolvers don't have access to private keys, all required signatures must be pre-signed by the spell caster and included in the spell components.
+
+**Location**: `/src/server/node/src/magic/magic.js`
+
 ## Future Enhancements
 
-### MAGIC Integration
-- **Spell Execution**: Automatic MAGIC spell triggers on step completion
-- **Payment Processing**: Integration with addie for contract-based payments
-- **Cross-Chain**: Support for multi-blockchain operations
+### Advanced MAGIC Features
+- **Automated Step Triggers**: Spell execution when steps are signed
+- **Cross-Service Workflows**: Coordinate between multiple services
+- **Template-Based Contracts**: Pre-configured contract types via spells
 
 ### Advanced Features
 - **Contract Templates**: Pre-built contract types
