@@ -63,14 +63,14 @@ const MAGIC = {
 
         // Sessionless auth - using the pre-signed contract signature from spell components
         signature: contractSignature,
-        timestamp: spell.timestamp,
+        timestamp: String(spell.timestamp), // Ensure timestamp is string
         userUUID: studentUUID,
         pubKey: studentPubKey // Student is creating the contract
       };
 
       // Debug logging
       console.log(`\n🔍 Contract creation debug:`);
-      console.log(`Message for verification: "${spell.timestamp}${studentUUID}"`);
+      console.log(`Message for verification: "${String(spell.timestamp)}${studentUUID}"`);
       console.log(`Signature: ${contractSignature}`);
       console.log(`PubKey: ${studentPubKey}`);
 
