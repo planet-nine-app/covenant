@@ -47,7 +47,7 @@ Covenant is a Planet Nine allyabase microservice that provides magical contract 
 - `GET /contracts` - List all contracts (with optional participant filter)
 
 ### Contract Interaction
-- `PUT /contract/:uuid/sign` - Sign a contract step
+- `PUT /contract/:uuid/sign` - Sign a contract step (requires dual signatures)
 - `GET /contract/:uuid/svg` - Get beautiful SVG representation
 
 ### MAGIC Protocol
@@ -376,6 +376,40 @@ document.addEventListener('covenantStepSigned', (event) => {
   const { contractUuid, stepId, stepCompleted } = event.detail;
   // Update UI, refresh contract display, etc.
 });
+```
+
+## Contract Signing Authentication
+
+### 🔐 **Dual Signature Requirement**
+
+The `/contract/:uuid/sign` endpoint requires **two separate signatures** for enhanced security:
+
+1. **Endpoint Authentication Signature** (`signature`)
+   - Message format: `timestamp + userUUID + contractUUID`
+   - Purpose: Authenticates the request to the Covenant endpoint
+   - Verified by Covenant's sessionless authentication middleware
+
+2. **Step Signing Signature** (`stepSignature`)
+   - Message format: `timestamp + userUUID + contractUUID + stepId`
+   - Purpose: Cryptographically signs the specific contract step
+   - Verified against the step being signed
+
+**CRITICAL for MAGIC Protocol Integration**:
+- Spell resolvers (like Addie's signInMoney spell) don't have access to private keys
+- Spell casters must pre-sign BOTH signatures before casting the spell
+- Both signatures must be included in the spell components
+- Example: Addie's signInMoney spell expects `contractSignature` and `stepSignature` components
+
+**Request Body Format**:
+```javascript
+{
+  stepId: "step-uuid",
+  stepSignature: "signature-for-step",
+  signature: "signature-for-auth",
+  timestamp: 1234567890,
+  userUUID: "user-uuid",
+  pubKey: "user-public-key"
+}
 ```
 
 ## Recent Updates
