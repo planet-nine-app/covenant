@@ -450,5 +450,42 @@ const viewportHeight = window.innerHeight * 0.8;
 fetch(`/contract/${uuid}/svg?width=${viewportWidth}&height=${viewportHeight}`)
 ```
 
+## Testing & Integration
+
+### Lesson Purchase Flow Test
+**Location**: `/sharon/tests/lesson-purchase/lesson-purchase-flow.test.js`
+
+The lesson purchase integration test demonstrates the complete flow of creating and managing lesson contracts using Covenant + Addie + MAGIC protocol:
+
+**Test Flow**:
+1. Creates teacher and student users
+2. Teacher creates lesson BDO with SVG visualization
+3. Student purchases lesson via Addie's `signInMoney` spell
+4. Addie forwards to Covenant's `purchaseLesson` MAGIC spell
+5. Covenant creates SODOTO contract with 5 steps
+6. Contract steps are signed by participants
+7. Observer BDOs created for audit trail
+
+**Observer Pattern for Contract Audit Trail**:
+- Each contract step creates a unique observer user
+- Observer fetches contract BDO and saves with their own keys
+- Creates public audit trail of contract progression
+- Observer BDO pubKeys are emojicoded for easy sharing
+- Test results HTML displays all observer BDOs with emojicodes
+
+**Response Format**:
+Covenant endpoints now return `{contractUuid, bdoPubKey, data}` tuple format:
+- `contractUuid`: The contract's UUID
+- `bdoPubKey`: Public key for contract's BDO (contains SVG)
+- `data`: Full contract object with steps and signatures
+
+**Test Results Visualization**:
+- `/sharon/tests/lesson-purchase/test-results.html` displays interactive results
+- Shows lesson BDO with emojicode
+- Shows contract with BDO pubKey emojicode and SVG visualization
+- Shows contract steps with completion status
+- Shows observer BDOs for each signed step with emojicodes
+- All emojicodes are click-to-copy for use with AdvanceKey/AdvanceShare
+
 ## Last Updated
-January 9, 2025 - Completed public key migration and added responsive web integration patterns for contract display.
+January 10, 2025 - Added lesson purchase integration test with observer pattern for contract audit trails.
