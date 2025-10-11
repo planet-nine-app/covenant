@@ -747,9 +747,11 @@ app.post('/contract', async (req, res) => {
 
 
     console.log(`Created contract: ${contract.uuid} - "${contract.title}" (saved to BDO)`);
-    
+
     res.json({
       success: true,
+      contractUuid: contract.uuid,
+      bdoPubKey: contract.pubKey,
       data: contract
     });
     
@@ -937,9 +939,11 @@ app.put('/contract/:uuid/sign', async (req, res) => {
     await saveContractToBDO(contract);
     
     console.log(`Signature added to contract ${uuid}, step ${stepId} by ${auth.userUUID} (saved to BDO)`);
-    
+
     res.json({
       success: true,
+      contractUuid: uuid,
+      bdoPubKey: contract.pubKey,
       data: {
         contractUuid: uuid,
         stepId: stepId,

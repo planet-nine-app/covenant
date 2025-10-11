@@ -96,7 +96,8 @@ const MAGIC = {
 
       return {
         success: true,
-        contractUuid: result.data?.uuid,
+        contractUuid: result.contractUuid || result.data?.uuid,
+        bdoPubKey: result.bdoPubKey || result.data?.pubKey,
         contract: result.data
       };
 
