@@ -420,6 +420,13 @@ The `/contract/:uuid/sign` endpoint requires **two separate signatures** for enh
 - **Backward Compatibility**: Tests and documentation updated to reflect pubKey-based architecture
 - **Consistent Authentication**: Aligns participant identification with sessionless authentication model
 
+### 🔄 **Contract BDO Persistence Fix (January 2025)**
+- **Key Reuse**: `saveContractToBDO` now checks `contractPubKeyMap` for existing keys before generating new ones
+- **Proper Updates**: Uses `bdo.updateBDO()` for existing contracts instead of creating new BDO users
+- **SVG Generation**: Generates SVG content before BDO save/update so it's included in the BDO data
+- **Consistent PubKey**: Contracts maintain the same pubKey throughout their lifecycle
+- **Observer Access**: Allows observers to fetch the latest contract state using the same pubKey
+
 ### 🌐 **Web Integration & Responsive Display**
 - **Responsive SVG Contracts**: Contract SVGs can be embedded on any website with responsive sizing
 - **Viewport Fitting**: CSS patterns for contracts that adapt to browser window size
@@ -459,12 +466,13 @@ The lesson purchase integration test demonstrates the complete flow of creating 
 
 **Test Flow**:
 1. Creates teacher and student users
-2. Teacher creates lesson BDO with SVG visualization
+2. Teacher creates lesson BDO with SVG visualization and unique keys
 3. Student purchases lesson via Addie's `signInMoney` spell
 4. Addie forwards to Covenant's `purchaseLesson` MAGIC spell
 5. Covenant creates SODOTO contract with 5 steps
-6. Contract steps are signed by participants
-7. Observer BDOs created for audit trail
+6. **Each step requires dual signatures** - both teacher and student must sign
+7. Observer BDOs created after each completed step (5 total observers)
+8. Each observer captures contract state snapshot for public audit trail
 
 **Observer Pattern for Contract Audit Trail**:
 - Each contract step creates a unique observer user
@@ -488,4 +496,4 @@ Covenant endpoints now return `{contractUuid, bdoPubKey, data}` tuple format:
 - All emojicodes are click-to-copy for use with AdvanceKey/AdvanceShare
 
 ## Last Updated
-January 10, 2025 - Added lesson purchase integration test with observer pattern for contract audit trails.
+January 11, 2025 - Fixed contract BDO persistence to maintain same pubKey across updates. Implemented dual signature requirement (both participants must sign each step). Added complete observer pattern capturing all 5 contract steps with dual signatures.
