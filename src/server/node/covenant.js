@@ -318,75 +318,82 @@ async function listContracts() {
 async function saveContractToBDO(contract) {
   try {
     const hash = contract.uuid; // Use contract UUID as BDO hash
-    
-    // Generate unique keys for this contract
-    const contractKeys = await sessionless.generateKeys(saveKeys, async (pubKey) => getKeys(pubKey));
-    
-    // Save the contract UUID -> pubKey mapping
-    await saveContractPubKeyMapping(contract.uuid, contractKeys.pubKey);
-    
-    // Store pubKey in contract for easy access
-    contract.pubKey = contractKeys.pubKey;
-    
-    // Create BDO user for this contract using the contract's keys
-    let bdoUuid;
+
+    // Check if we already have keys for this contract
+    let contractKeys;
+    const existingPubKey = contractPubKeyMap.get(contract.uuid);
+
+    if (existingPubKey) {
+      // Use existing keys
+      console.log(`🔑 Using existing keys for contract ${contract.uuid}: ${existingPubKey.substring(0, 16)}...`);
+      contractKeys = await getKeys(existingPubKey);
+      contract.pubKey = existingPubKey;
+    } else {
+      // Generate new keys for this contract
+      console.log(`🔑 Generating new keys for contract ${contract.uuid}`);
+      contractKeys = await sessionless.generateKeys(saveKeys, async (pubKey) => getKeys(pubKey));
+
+      // Save the contract UUID -> pubKey mapping
+      await saveContractPubKeyMapping(contract.uuid, contractKeys.pubKey);
+
+      // Store pubKey in contract for easy access
+      contract.pubKey = contractKeys.pubKey;
+    }
+
+    // Generate beautiful SVG representation BEFORE saving to BDO
+    console.log(`🎨 Generating SVG representation for contract ${contract.uuid}...`);
     try {
-      // Set up sessionless to use our contract keys globally for this BDO operation
-      const originalGetKeys = sessionless.getKeys;
-      sessionless.getKeys = async () => contractKeys;
-      
-      // BDO's createUser will call sessionless.generateKeys() but we want it to use our keys
-      const bdoSaveKeys = async (keys) => {
-        console.log(`🔑 bdoSaveKeys called - BDO wants to save keys, returning our contract keys instead`);
-        // BDO expects to save the generated keys, but we return our contract keys
-        return contractKeys;
-      };
-      
-      const bdoGetKeys = async () => {
-        console.log(`🔑 bdoGetKeys called - returning our contract keys`);
-        return contractKeys;
-      };
-      
-      console.log(`🚀 Calling bdo.createUser with hash: ${hash}, using contractKeys.pubKey: ${contractKeys.pubKey.substring(0, 16)}... for authentication`);
-      bdoUuid = await bdo.createUser(hash, contract, bdoSaveKeys, bdoGetKeys);
-      console.log(`✅ Created BDO user ${bdoUuid} for contract ${contract.uuid} using contract pubKey ${contractKeys.pubKey.substring(0, 16)}...`);
-      
-      // Restore original sessionless getKeys
-      sessionless.getKeys = originalGetKeys;
-    } catch (error) {
-      // Restore sessionless getKeys in error case too
-      sessionless.getKeys = originalGetKeys;
+      const svg = generateContractSVG(contract, { theme: 'dark', width: 800, height: 600 });
+      contract.svgContent = svg;
+      console.log(`✅ Generated SVG for contract ${contract.uuid}`);
+    } catch (svgError) {
+      console.log(`⚠️ Failed to generate SVG: ${svgError.message}`);
+      // Continue without SVG if generation fails
+    }
 
-      console.log('Failed to create BDO user, attempting update:', error.message);
-      // If creation fails, the BDO user already exists - update it instead
+    // Create or update BDO user for this contract using the contract's keys
+    let bdoUuid = contract.bdoUuid;
+
+    if (!bdoUuid) {
+      // Create new BDO user
       try {
-        // Use existing bdoUuid from contract
-        bdoUuid = contract.bdoUuid;
-        if (!bdoUuid) {
-          throw new Error('No existing bdoUuid to update');
-        }
+        const bdoSaveKeys = async (keys) => {
+          console.log(`🔑 bdoSaveKeys called - returning contract keys`);
+          return contractKeys;
+        };
 
-        // Get the contract user object to use for authentication
+        const bdoGetKeys = async () => {
+          console.log(`🔑 bdoGetKeys called - returning contract keys`);
+          return contractKeys;
+        };
+
+        console.log(`🚀 Creating new BDO for contract ${contract.uuid} with pubKey: ${contractKeys.pubKey.substring(0, 16)}...`);
+        bdoUuid = await bdo.createUser(hash, contract, bdoSaveKeys, bdoGetKeys);
+        console.log(`✅ Created BDO user ${bdoUuid} for contract ${contract.uuid}`);
+        contract.bdoUuid = bdoUuid;
+      } catch (error) {
+        throw new Error(`Failed to create BDO user for contract: ${error.message}`);
+      }
+    } else {
+      // Update existing BDO user
+      try {
         const bdoSaveKeys = async (keys) => contractKeys;
         const bdoGetKeys = async () => contractKeys;
 
-        // Create a temporary user object for BDO authentication
+        // Create a user object for BDO authentication
         const contractUser = {
           uuid: bdoUuid,
           pubKey: contractKeys.pubKey,
           hash: hash
         };
 
-        console.log(`📝 Updating existing BDO ${bdoUuid} for contract ${contract.uuid}`);
+        console.log(`📝 Updating existing BDO ${bdoUuid} for contract ${contract.uuid} with pubKey: ${contractKeys.pubKey.substring(0, 16)}...`);
         await bdo.updateBDO(contractUser, hash, contract, true); // true = make public
         console.log(`✅ Updated BDO ${bdoUuid} for contract ${contract.uuid}`);
       } catch (updateError) {
-        throw new Error(`Failed to create or update BDO for contract: ${updateError.message}`);
+        throw new Error(`Failed to update BDO for contract: ${updateError.message}`);
       }
     }
-    
-    // Update contract with BDO UUID and make it public
-    contract.bdoUuid = bdoUuid;
     
     // Generate beautiful SVG representation for cross-service access
     console.log(`🎨 Generating SVG representation for contract ${contract.uuid}...`);
