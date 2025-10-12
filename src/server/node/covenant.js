@@ -356,18 +356,32 @@ async function saveContractToBDO(contract) {
     } catch (error) {
       // Restore sessionless getKeys in error case too
       sessionless.getKeys = originalGetKeys;
-      
+
       console.log('Failed to create BDO user, attempting update:', error.message);
-      // If creation fails, try to update existing
+      // If creation fails, the BDO user already exists - update it instead
       try {
-        const bdoResult = await bdo.getBDO(contract.bdoUuid || bdoUuid, hash);
-        if (bdoResult && bdoResult.uuid) {
-          bdoUuid = bdoResult.uuid;
-        } else {
-          throw new Error('Failed to create or find BDO user for contract');
+        // Use existing bdoUuid from contract
+        bdoUuid = contract.bdoUuid;
+        if (!bdoUuid) {
+          throw new Error('No existing bdoUuid to update');
         }
-      } catch (getBdoError) {
-        throw new Error(`Failed to create or find BDO user for contract: ${getBdoError.message}`);
+
+        // Get the contract user object to use for authentication
+        const bdoSaveKeys = async (keys) => contractKeys;
+        const bdoGetKeys = async () => contractKeys;
+
+        // Create a temporary user object for BDO authentication
+        const contractUser = {
+          uuid: bdoUuid,
+          pubKey: contractKeys.pubKey,
+          hash: hash
+        };
+
+        console.log(`📝 Updating existing BDO ${bdoUuid} for contract ${contract.uuid}`);
+        await bdo.updateBDO(contractUser, hash, contract, true); // true = make public
+        console.log(`✅ Updated BDO ${bdoUuid} for contract ${contract.uuid}`);
+      } catch (updateError) {
+        throw new Error(`Failed to create or update BDO for contract: ${updateError.message}`);
       }
     }
     
