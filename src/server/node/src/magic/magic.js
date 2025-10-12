@@ -43,16 +43,16 @@ const MAGIC = {
         participants: [teacherPubKey, studentPubKey],
         steps: [
           {
-            description: 'Payment Completed',
+            description: 'Lesson Acquired',
           },
           {
-            description: 'Grant Lesson Access',
+            description: 'See One',
           },
           {
-            description: 'Complete Lesson',
+            description: 'Do One',
           },
           {
-            description: 'Verify Completion',
+            description: 'Teach One',
           },
           {
             description: 'Grant Nineum Permission',
