@@ -495,5 +495,25 @@ Covenant endpoints now return `{contractUuid, bdoPubKey, data}` tuple format:
 - Shows observer BDOs for each signed step with emojicodes
 - All emojicodes are click-to-copy for use with AdvanceKey/AdvanceShare
 
+## MAGIC Route Conversion (October 2025)
+
+All Covenant REST endpoints have been converted to MAGIC protocol spells:
+
+### Converted Spells (5 total)
+1. **covenantUserCreate** - Create covenant user
+2. **covenantContract** - Create new magical contract
+3. **covenantContractUpdate** - Update existing contract
+4. **covenantContractSign** - Sign contract step (dual signature requirement)
+5. **covenantContractDelete** - Delete contract
+
+**Testing**: Comprehensive MAGIC spell tests available in `/test/mocha/magic-spells.js` (10 tests covering success and error cases)
+
+**Documentation**: See `/MAGIC-ROUTES.md` for complete spell specifications and migration guide
+
+**Special Notes**:
+- Contract signing spell requires dual signatures (endpoint auth + step signature)
+- All contracts maintain per-contract cryptographic keys
+- BDO integration ensures distributed contract storage
+
 ## Last Updated
-January 11, 2025 - Fixed contract BDO persistence to maintain same pubKey across updates. Implemented dual signature requirement (both participants must sign each step). Added complete observer pattern capturing all 5 contract steps with dual signatures.
+October 14, 2025 - Completed full MAGIC protocol conversion. All 5 routes now accessible via MAGIC spells with centralized Fount authentication and dual signature support.
